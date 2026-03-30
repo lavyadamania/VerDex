@@ -1,0 +1,74 @@
+# ============================================================
+# Docker Compose — Court Transparency System
+# ============================================================
+# Services: MongoDB + Redis + Backend API + Frontend
+# Usage:
+#   docker compose up --build       (start all)
+#   docker compose down             (stop all)
+#   docker compose down -v          (stop + delete data)
+# ============================================================
+
+version: '3.9'
+
+services:
+  # ── MongoDB Database ──
+  mongo:
+    image: mongo:7
+    container_name: court_mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand({ping:1})", "--quiet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis Cache & Queue ──
+  redis:
+    image: redis:7-alpine
+    container_name: court_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend API (Node.js + Express) ──
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: court_backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      MONGO_URI: mongodb://mongo:27017/court_transparency
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: dev-jwt-secret-key-court-transparency-2024
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/uploads:/app/uploads
+      - /app/node_modules
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  mongo_data:
+    driver: local
+  redis_data:
+    driver: local

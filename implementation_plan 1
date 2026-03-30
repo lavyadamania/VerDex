@@ -1,0 +1,261 @@
+# 🏛️ Court Transparency System — Implementation Plan
+
+## Decisions Locked ✅
+
+| Decision | Choice |
+|:---|:---|
+| **Database** | PostgreSQL via Docker |
+| **Redis** | Redis via Docker |
+| **OTP** | Simulated (console log + Redis) |
+| **Build Order** | Backend-first, then frontend |
+| **AI** | Google Gemini (pluggable, works without key too) |
+| **Deployment** | Docker Compose locally → Cloud later |
+
+---
+
+## 🔨 Build Stages (Backend-First)
+
+### Stage 1: Project Scaffold & Docker Setup
+- [ ] Initialize Node.js project with Express
+- [ ] Create `docker-compose.yml` (PostgreSQL + Redis + Node app)
+- [ ] Create `Dockerfile` for backend
+- [ ] Setup environment config (`.env` + validation)
+- [ ] Setup PostgreSQL connection with `pg` driver
+- [ ] Setup Redis connection with `ioredis`
+- [ ] Create Express app skeleton with health check endpoint
+- [ ] Test: `docker-compose up` → API responds on `/health`
+
+---
+
+### Stage 2: Database Schema & Migrations
+- [ ] Write full SQL schema (8 tables: courts, users, cases, case_events, documents, alerts, disclosure_requests, audit_log)
+- [ ] Create migration runner script
+- [ ] Seed initial data (sample courts, admin user)
+- [ ] Test: All tables created, seed data visible
+
+---
+
+### Stage 3: Authentication System
+- [ ] User registration endpoint (bcrypt password hashing)
+- [ ] Login endpoint (JWT token generation)
+- [ ] OTP generation → simulated (console log + Redis with 5-min TTL)
+- [ ] OTP verification endpoint
+- [ ] JWT auth middleware
+- [ ] Token refresh endpoint
+- [ ] Logout (session invalidation in Redis)
+- [ ] Test: Register → OTP → Verify → Login → Access protected route
+
+---
+
+### Stage 4: RBAC & Security Middleware
+- [ ] Role-based access control middleware (victim, admin, court_staff)
+- [ ] Rate limiter (Redis-backed, per IP)
+- [ ] Request validation middleware (Zod schemas)
+- [ ] Global error handler
+- [ ] Audit logging middleware
+- [ ] Test: Victim can't access admin routes, rate limit triggers on spam
+
+---
+
+### Stage 5: Court Management APIs
+- [ ] CRUD for courts (admin only)
+- [ ] List courts with filters (district, state)
+- [ ] Court detail with case count stats
+- [ ] Test: Create court → list → get details
+
+---
+
+### Stage 6: Case Management Core
+- [ ] Create case (victim submits case details)
+- [ ] Get case by ID (full details for owner, anonymized for public)
+- [ ] Update case (status, next hearing date, etc.)
+- [ ] Get victim's own cases (`/my-cases`)
+- [ ] Case input validation (Zod)
+- [ ] Redis cache sync on case create/update
+- [ ] Anonymization utility for public view
+- [ ] Test: Create case → update status → verify Redis cache → verify anonymized output
+
+---
+
+### Stage 7: Case Events & Timeline
+- [ ] Add case event (hearing, adjournment, order, etc.)
+- [ ] Get case timeline (ordered events)
+- [ ] Auto-increment adjournment count
+- [ ] Auto-update `last_update` timestamp
+- [ ] Timeline validation (no impossible date sequences)
+- [ ] Test: Add multiple events → verify timeline order → verify adjournment count
+
+---
+
+### Stage 8: Document Upload System
+- [ ] Multer setup for file uploads (local storage in Docker volume)
+- [ ] Upload document linked to a case
+- [ ] Get documents for a case
+- [ ] Admin verify/reject document
+- [ ] Test: Upload PDF → retrieve → admin verify
+
+---
+
+### Stage 9: AI Integration (Pluggable)
+- [ ] AI service wrapper (Google Gemini)
+- [ ] Graceful fallback if no API key (skip AI, log warning)
+- [ ] Document text extraction (OCR via Gemini Vision)
+- [ ] Document summarization
+- [ ] Delay reason classification
+- [ ] BullMQ queue for async AI processing
+- [ ] AI worker that processes queue jobs
+- [ ] Test: Upload doc → AI job enqueued → summary stored (or skipped if no key)
+
+---
+
+### Stage 10: Delay Detection Engine
+- [ ] Delay detection worker (BullMQ repeatable job, every 6 hours)
+- [ ] Scan all active cases for:
+  - No update > 30 days → warning (score 3-5)
+  - No update > 60 days → high risk (score 6-8)
+  - No update > 90 days → critical (score 9-10)
+- [ ] Update `delay_risk_score` in PostgreSQL
+- [ ] Add case IDs to Redis delay sets (`delay:warning`, `delay:high_risk`, `delay:critical`)
+- [ ] Generate alerts for affected cases
+- [ ] Stagnation flag detection
+- [ ] Test: Create case with old date → run worker → verify alert created + Redis set updated
+
+---
+
+### Stage 11: Reminder & Alert System
+- [ ] Hearing reminder worker (BullMQ repeatable, every hour)
+  - Next hearing in 3 days → alert
+  - Next hearing in 1 day → alert
+- [ ] Alert CRUD endpoints (get alerts, mark read, mark all read)
+- [ ] Alert generation service (creates alerts in DB)
+- [ ] Test: Set hearing date 1 day ahead → run worker → verify reminder alert
+
+---
+
+### Stage 12: Leaderboard & Analytics Engine
+- [ ] Leaderboard computation service:
+  - Cases resolved count
+  - Average resolution time
+  - Adjournment rate
+  - Backlog size
+  - Justice Speed Index (composite score)
+- [ ] Store rankings in Redis sorted sets
+- [ ] Leaderboard refresh worker (BullMQ repeatable, every 6 hours)
+- [ ] Leaderboard API endpoint (public)
+- [ ] Admin analytics endpoints (court-wise breakdown)
+- [ ] Test: Seed multiple cases + courts → run leaderboard refresh → verify rankings
+
+---
+
+### Stage 13: Verification System (4-Layer)
+- [ ] Layer 1: CNR number format validation
+- [ ] Layer 2: OTP verification (already built in Stage 3)
+- [ ] Layer 3: Advocate confirmation (optional, stores advocate details)
+- [ ] Layer 4: Document upload + text extraction + matching
+- [ ] Verification status progression: unverified → otp_verified → document_verified → fully_verified
+- [ ] Test: Register → OTP verify → upload ID doc → verify status progression
+
+---
+
+### Stage 14: Victim-Controlled Disclosure System
+- [ ] Submit disclosure request (select fields: accused_name, judge_name, timeline)
+- [ ] AI safety check (does disclosure risk identifying victim?)
+- [ ] Admin review endpoint (approve/reject with notes)
+- [ ] On approval: update case.disclosure_mode + case.disclosed_fields
+- [ ] Revoke disclosure (victim can take back)
+- [ ] Public case view respects disclosure_mode
+- [ ] Audit log for all disclosure actions
+- [ ] Test: Submit request → admin approve → verify public view shows disclosed fields → revoke → verify removed
+
+---
+
+### Stage 15: Public Dashboard API
+- [ ] Anonymized case listing with pagination, filters, sorting
+- [ ] Anonymized case detail (masked ID)
+- [ ] System-wide statistics (total cases, avg delay, etc.)
+- [ ] Court performance public view
+- [ ] Test: Verify NO private data leaks in any public endpoint
+
+---
+
+### Stage 16: Admin Dashboard API
+- [ ] All cases view with advanced filters
+- [ ] Stuck cases view (filtered by delay risk)
+- [ ] Court-wise analytics aggregation
+- [ ] Audit log viewer with pagination
+- [ ] Admin stats (total users, cases by status, etc.)
+- [ ] Test: Admin login → view all → filter stuck cases → check audit log
+
+---
+
+### Stage 17: Error Detection & Validation
+- [ ] Invalid date sequence detection (hearing before filing)
+- [ ] Impossible timeline detection
+- [ ] Document vs input mismatch detection (AI-powered)
+- [ ] Auto-generate error alerts
+- [ ] Test: Submit case with impossible dates → verify error alert generated
+
+---
+
+### Stage 18: Redis Pub/Sub for Real-Time Updates
+- [ ] Pub/Sub channel per user for live alerts
+- [ ] SSE (Server-Sent Events) endpoint for frontend
+- [ ] Publish events on: new alert, case update, disclosure status change
+- [ ] Test: Open SSE connection → trigger alert → verify real-time delivery
+
+---
+
+### Stage 19: React Frontend Setup
+- [ ] Initialize Vite + React project
+- [ ] Setup routing (React Router)
+- [ ] Auth context & protected routes
+- [ ] API service layer (Axios)
+- [ ] Base layout with navigation
+- [ ] Premium design system (dark theme, glassmorphism)
+
+---
+
+### Stage 20: Victim Portal Frontend
+- [ ] Login / Register pages
+- [ ] OTP verification page
+- [ ] Victim dashboard (case overview)
+- [ ] Case timeline view
+- [ ] Document upload interface
+- [ ] Disclosure control panel
+- [ ] Alert notifications panel
+
+---
+
+### Stage 21: Public Dashboard Frontend
+- [ ] Anonymized case listing with search/filter
+- [ ] Case detail view (anonymized)
+- [ ] Court leaderboard with rankings
+- [ ] System statistics cards
+
+---
+
+### Stage 22: Admin Dashboard Frontend
+- [ ] Admin overview with stats
+- [ ] All cases table with filters
+- [ ] Stuck cases alert view
+- [ ] Court analytics charts
+- [ ] Audit log viewer
+- [ ] Disclosure review interface
+
+---
+
+### Stage 23: Testing & Polish
+- [ ] End-to-end flow testing
+- [ ] Error handling edge cases
+- [ ] Performance optimization (Redis TTLs, query optimization)
+- [ ] Security audit (no data leaks in public APIs)
+- [ ] README with setup instructions
+
+---
+
+### Stage 24: Cloud Deployment
+- [ ] Setup Neon (PostgreSQL), Upstash (Redis), Cloudinary (files)
+- [ ] Update environment variables for cloud
+- [ ] Deploy backend to Render
+- [ ] Deploy frontend to Vercel
+- [ ] Verify everything works in cloud
