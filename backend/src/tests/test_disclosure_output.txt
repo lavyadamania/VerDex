@@ -1,0 +1,98 @@
+﻿ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  ≡ƒº¬ Stage 14 Test ΓÇö Victim-Controlled Disclosure
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+[01:55:53] [32mINFO[39m: [36mΓ£à MongoDB connected ΓÇö mongodb://localhost:27017/court_transparency[39m
+[01:55:53] [32mINFO[39m: [36mConnecting to Redis via URL...[39m
+
+≡ƒöº Setting up test data...
+
+   Γ£à Court, users, and cases created
+
+   --- Disclosable Fields ---
+
+   Γ£à PASS: DISCLOSABLE_FIELDS includes accused_name
+   Γ£à PASS: DISCLOSABLE_FIELDS includes judge_name
+   Γ£à PASS: DISCLOSABLE_FIELDS includes timeline
+   Γ£à PASS: DISCLOSABLE_FIELDS has at least 4 fields
+
+   --- AI Safety Check ---
+
+   Γ£à PASS: Low risk for single field
+   Γ£à PASS: Low risk passes safety check
+   Γ£à PASS: Medium risk for accused+judge combo
+   Γ£à PASS: Medium risk has warnings
+   Γ£à PASS: High risk for victim_statement
+   Γ£à PASS: High risk fails safety check
+   Γ£à PASS: Sensitive case type raises risk
+   Γ£à PASS: Sensitive case has warning about case type
+
+   --- Submit Disclosure Request ---
+
+   Γ£à PASS: Request created successfully
+   Γ£à PASS: Request status is pending
+   Γ£à PASS: Requested fields stored
+   Γ£à PASS: Safety check result included
+   Γ£à PASS: Justification stored
+   Γ£à PASS: Duplicate pending request blocked
+   Γ£à PASS: Non-owner cannot submit request
+   Γ£à PASS: Invalid field names rejected
+
+   --- Admin Approval ---
+
+   Γ£à PASS: Request status changed to approved
+   Γ£à PASS: Reviewed_by set
+   Γ£à PASS: Reviewed_at set
+   Γ£à PASS: Case updated flag is true
+   Γ£à PASS: Case disclosure_mode changed to partial
+   Γ£à PASS: Case disclosed_fields includes accused_name
+   Γ£à PASS: Case disclosed_fields includes judge_name
+   Γ£à PASS: Cannot re-review approved request
+
+   --- Public View ---
+
+   Γ£à PASS: Anonymized view has case_type
+   Γ£à PASS: Anonymized view has masked_id
+   Γ£à PASS: Accused name appears in public view (disclosed)
+   Γ£à PASS: Judge name appears in public view (disclosed)
+   Γ£à PASS: Advocate name NOT in public view (not disclosed)
+   Γ£à PASS: Victim statement NOT in public view
+
+   --- Revocation ---
+
+   Γ£à PASS: Non-owner cannot revoke
+   Γ£à PASS: Request status changed to revoked
+   Γ£à PASS: Case mode changed back to private
+   Γ£à PASS: No remaining disclosed fields
+   Γ£à PASS: Case disclosure_mode is private after revoke
+   Γ£à PASS: Case disclosed_fields empty after revoke
+   Γ£à PASS: Accused name removed from public view after revoke
+   Γ£à PASS: Judge name removed from public view after revoke
+   Γ£à PASS: Cannot revoke a non-approved request
+
+   --- Rejection Flow ---
+
+   Γ£à PASS: High-risk request created
+   Γ£à PASS: Safety check flagged high risk
+   Γ£à PASS: Request rejected
+   Γ£à PASS: Case NOT updated on rejection
+   Γ£à PASS: Case stays private after rejection
+
+   --- Disclosure History ---
+
+[01:55:53] [32mINFO[39m: [36mΓ£à Redis connected (real Redis server)[39m
+[01:55:53] [32mINFO[39m: [36m≡ƒôï Disclosure request submitted for case DTEST-1775075153945-001 by user 69cd7f5153786480cc1d0382[39m
+[01:55:53] [32mINFO[39m: [36mΓ£à Disclosure approved for case DTEST-1775075153945-001: accused_name, judge_name[39m
+[01:55:53] [32mINFO[39m: [36m≡ƒöÆ Disclosure revoked for case DTEST-1775075153945-001: removed accused_name, judge_name[39m
+[01:55:53] [32mINFO[39m: [36m≡ƒôï Disclosure request submitted for case DTEST-1775075153945-001 by user 69cd7f5153786480cc1d0382[39m
+[01:55:53] [32mINFO[39m: [36mΓ¥î Disclosure rejected for request 69cd7f5153786480cc1d03aa[39m
+   Γ£à PASS: History has at least 2 requests
+   Γ£à PASS: History is sorted newest first
+
+≡ƒº╣ Cleaning up test data...
+   Γ£à All test data cleaned up
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+   ≡ƒôï Test Results: 50 passed, 0 failed
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+Γ£à All Stage 14 tests PASSED!

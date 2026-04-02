@@ -1,0 +1,100 @@
+﻿ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  ≡ƒº¬ Stage 16 Test ΓÇö Admin Dashboard API
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+[02:16:46] [32mINFO[39m: [36mΓ£à MongoDB connected ΓÇö mongodb://localhost:27017/court_transparency[39m
+[02:16:46] [32mINFO[39m: [36mConnecting to Redis via URL...[39m
+
+≡ƒöº Setting up test data...
+
+   Γ£à 3 users (admin, victim, staff), 2 courts, 12 cases, 5 audit logs created
+
+   --- Admin Stats ---
+
+[02:16:46] [32mINFO[39m: [36mΓ£à Redis connected (real Redis server)[39m
+   Γ£à PASS: Stats has overview
+   Γ£à PASS: Stats has by_status
+   Γ£à PASS: Stats has by_role
+   Γ£à PASS: Total users >= 3
+   Γ£à PASS: Total cases >= 12
+   Γ£à PASS: Total courts >= 2
+   Γ£à PASS: avg_delay_risk is a number
+   Γ£à PASS: by_role has admin
+   Γ£à PASS: by_role has victim
+
+   --- All Cases with Filters ---
+
+   Γ£à PASS: All 12 test cases retrievable
+   Γ£à PASS: Admin can see victim_user info
+   Γ£à PASS: Admin sees victim full_name
+   Γ£à PASS: Status filter works (filed)
+   Γ£à PASS: Delay risk range filter works (>=7)
+   Γ£à PASS: Stagnation filter works
+   Γ£à PASS: CNR search works
+
+   --- Stuck Cases View ---
+
+   Γ£à PASS: Stuck cases result has total
+   Γ£à PASS: Stuck cases result has cases array
+   Γ£à PASS: Stuck cases found (threshold 7)
+   Γ£à PASS: Stuck cases have court populated
+   Γ£à PASS: All stuck cases have delay >= 7
+   Γ£à PASS: No resolved cases in stuck list
+   Γ£à PASS: Stuck cases sorted by delay_risk_score DESC
+   Γ£à PASS: Has page number
+   Γ£à PASS: Has pages count
+
+   --- Court Analytics ---
+
+   Γ£à PASS: Analytics returned array
+   Γ£à PASS: Analytics has entries
+   Γ£à PASS: Court One found in analytics
+   Γ£à PASS: Court Two found in analytics
+   Γ£à PASS: Court One has total_cases
+   Γ£à PASS: Court One has resolved_cases
+   Γ£à PASS: Court One has resolution_rate
+   Γ£à PASS: Court One has avg_delay_score
+   Γ£à PASS: Court One has district
+   Γ£à PASS: Court One has state
+   Γ£à PASS: Analytics sorted by resolution_rate DESC
+
+   --- Audit Log Viewer ---
+
+   Γ£à PASS: Audit logs result has total
+   Γ£à PASS: Audit logs has logs array
+   Γ£à PASS: At least 5 audit log entries
+   Γ£à PASS: Filter by action works
+   Γ£à PASS: All filtered logs match action
+   Γ£à PASS: Filter by entity_type works
+   Γ£à PASS: Filter by user_id works
+   Γ£à PASS: Audit logs has page
+   Γ£à PASS: Audit logs has pages
+   Γ£à PASS: Audit logs has limit
+   Γ£à PASS: Audit logs sorted newest first
+
+   --- User Management ---
+
+   Γ£à PASS: All 3 test users found
+   Γ£à PASS: No password_hash in user listing
+   Γ£à PASS: Role filter (admin) works
+   Γ£à PASS: Role filter (victim) works
+   Γ£à PASS: Verification status filter works
+   Γ£à PASS: Search by name works
+
+   --- RBAC Access Control ---
+
+   Γ£à PASS: Admin JWT generated
+   Γ£à PASS: Admin token decodes to correct userId
+   Γ£à PASS: Admin user has admin role
+   Γ£à PASS: Victim user does NOT have admin role
+   Γ£à PASS: Staff user has court_staff role
+   Γ£à PASS: RBAC: victim role is blocked from admin routes
+   Γ£à PASS: RBAC: admin role is allowed on admin routes
+
+≡ƒº╣ Cleaning up test data...
+   Γ£à All test data cleaned up
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+   ≡ƒôï Test Results: 60 passed, 0 failed
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+Γ£à All Stage 16 tests PASSED!

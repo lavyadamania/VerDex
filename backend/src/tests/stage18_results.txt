@@ -1,0 +1,85 @@
+﻿ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  ≡ƒº¬ Stage 18 Test ΓÇö Redis Pub/Sub & SSE
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+[02:53:22] [32mINFO[39m: [36mΓ£à MongoDB connected ΓÇö mongodb://localhost:27017/court_transparency[39m
+[02:53:22] [32mINFO[39m: [36mConnecting to Redis via URL...[39m
+
+   ≡ƒôí Redis mode: Real Redis
+
+
+≡ƒöº Setting up test data...
+
+   Γ£à 2 users (victim + admin), 1 court, 1 case created
+
+   --- Test 1: Event Publisher (publish) ---
+
+[02:53:22] [32mINFO[39m: [36mΓ£à Redis connected (real Redis server)[39m
+   Γ£à PASS: publishToUser fires without error (no subscribers)
+[02:53:22] [34mDEBUG[39m: [36m≡ƒôí [Redis] Published to user:fake_user_id_123: test_event[39m
+   Γ£à PASS: publishToAll fires without error
+   Γ£à PASS: publishToUser with null userId is a no-op
+
+   --- Test 2: Subscribe + Receive ---
+
+   Γ£à PASS: subscribe() returns object with unsubscribe method
+[02:53:22] [34mDEBUG[39m: [36m≡ƒôí [Redis] Published to global: system_notification[39m
+[02:53:22] [34mDEBUG[39m: [36m≡ƒôí [Redis] Subscribed to: user:69cede4a5831cc2d60578ec1[39m
+   Γ£à PASS: Subscriber received the published message
+   Γ£à PASS: Received message has correct type
+   Γ£à PASS: Received message has correct data
+   Γ£à PASS: Received message has timestamp
+[02:53:23] [34mDEBUG[39m: [36m≡ƒôí [Redis] Published to user:69cede4a5831cc2d60578ec1: new_alert[39m
+[02:53:23] [34mDEBUG[39m: [36m≡ƒôí [Redis] Subscribed to: global[39m
+   Γ£à PASS: Global subscriber received broadcast
+[02:53:23] [34mDEBUG[39m: [36m≡ƒôí [Redis] Published to global: system_notification[39m
+[02:53:23] [34mDEBUG[39m: [36m≡ƒôí [Redis] Unsubscribed from: user:69cede4a5831cc2d60578ec1[39m
+   Γ£à PASS: Unsubscribe completes without error
+
+   --- Test 4: Alert ΓåÆ Pub/Sub ---
+
+[02:53:23] [34mDEBUG[39m: [36m≡ƒôí [Redis] Unsubscribed from: global[39m
+[02:53:24] [34mDEBUG[39m: [36m≡ƒôí [Redis] Subscribed to: user:69cede4a5831cc2d60578ec1[39m
+[02:53:24] [32mINFO[39m: [36m≡ƒöö Alert created: [medium] hearing_reminder for user 69cede4a5831cc2d60578ec1 ΓÇö Test Hearing Reminder[39m
+[02:53:24] [34mDEBUG[39m: [36m≡ƒôí [Redis] Published to user:69cede4a5831cc2d60578ec1: new_alert[39m
+   Γ£à PASS: Alert was created successfully
+   Γ£à PASS: Pub/Sub event fired on alert creation
+   Γ£à PASS: Alert event has correct data.title
+   Γ£à PASS: Alert event has severity field
+
+   --- Test 5: CaseCache ΓåÆ Pub/Sub ---
+
+[02:53:24] [34mDEBUG[39m: [36m≡ƒôí [Redis] Unsubscribed from: user:69cede4a5831cc2d60578ec1[39m
+[02:53:24] [34mDEBUG[39m: [36m≡ƒôí [Redis] Subscribed to: user:69cede4a5831cc2d60578ec1[39m
+   Γ£à PASS: CaseCache sync triggers Pub/Sub case_update event
+   Γ£à PASS: Case update event has caseId
+   Γ£à PASS: Case update event has status
+
+   --- Test 6: Disclosure Service Integration ---
+
+   Γ£à PASS: disclosureService imports publishToUser
+   Γ£à PASS: disclosureService calls publishToUser on review
+   Γ£à PASS: disclosureService calls publishToUser on revoke
+
+   --- Test 7: Server Health & Route Registration ---
+
+   Γ£à PASS: app.js registers /api/sse route
+   Γ£à PASS: app.js imports sse.routes
+   Γ£à PASS: app.js has SSE in API index
+   Γ£à PASS: sse.routes exports Express router
+   Γ£à PASS: sse.routes exports getActiveConnectionCount
+   Γ£à PASS: eventPublisher exports publishToUser
+   Γ£à PASS: eventPublisher exports publishToAll
+   Γ£à PASS: eventPublisher exports subscribe
+   Γ£à PASS: eventPublisher exports getSubscriberCount
+
+≡ƒº╣ Cleaning up test data...
+   Γ£à All test data cleaned up
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+   ≡ƒôï Test Results: 29 passed, 0 failed
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+Γ£à All Stage 18 tests PASSED!
+[02:53:25] [32mINFO[39m: [36m≡ƒöä Redis synced: case:69cede4a5831cc2d60578ec7 ΓåÆ status=hearing[39m
+[02:53:25] [34mDEBUG[39m: [36m≡ƒôí [Redis] Published to user:69cede4a5831cc2d60578ec1: case_update[39m
+[02:53:25] [34mDEBUG[39m: [36m≡ƒôí [Redis] Unsubscribed from: user:69cede4a5831cc2d60578ec1[39m

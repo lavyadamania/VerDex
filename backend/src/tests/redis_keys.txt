@@ -1,0 +1,57 @@
+﻿[03:05:21] [32mINFO[39m: [36mConnecting to Redis via URL...[39m
+Redis Mode: REAL REDIS (Upstash)
+
+=== ALL REDIS KEYS IN USE ===
+[03:05:21] [32mINFO[39m: [36mΓ£à Redis connected (real Redis server)[39m
+[ZSET]     bull:delay-detection:delayed
+[?]        bull:delay-detection:events
+[STRING]   bull:delay-detection:id
+[HASH]     bull:delay-detection:meta
+[ZSET]     bull:delay-detection:repeat
+[HASH]     bull:delay-detection:repeat:f06c61787f559880371d939a3187637f
+[HASH]     bull:delay-detection:repeat:f06c61787f559880371d939a3187637f:1775088000000
+[ZSET]     bull:hearing-reminders:delayed
+[?]        bull:hearing-reminders:events
+[STRING]   bull:hearing-reminders:id
+[HASH]     bull:hearing-reminders:meta
+[ZSET]     bull:hearing-reminders:repeat
+[HASH]     bull:hearing-reminders:repeat:4ea4e596d93b3f48da964d61c57cde69
+[HASH]     bull:hearing-reminders:repeat:4ea4e596d93b3f48da964d61c57cde69:1775077200000
+[ZSET]     bull:leaderboard-refresh:delayed
+[?]        bull:leaderboard-refresh:events
+[STRING]   bull:leaderboard-refresh:id
+[HASH]     bull:leaderboard-refresh:meta
+[ZSET]     bull:leaderboard-refresh:repeat
+[HASH]     bull:leaderboard-refresh:repeat:240df2c90d4cf053e7c56afd53ecfc2b
+[HASH]     bull:leaderboard-refresh:repeat:240df2c90d4cf053e7c56afd53ecfc2b:1775088000000
+[STRING]   case:69cede01a0a8d6276cdf8b21:adjournment_count
+[HASH]     case:69cede01a0a8d6276cdf8b21:info
+[STRING]   case:69cede01a0a8d6276cdf8b21:last_update
+[STRING]   case:69cede01a0a8d6276cdf8b21:next_hearing
+[STRING]   case:69cede01a0a8d6276cdf8b21:status
+[STRING]   case:69cede1225cde8be2333565e:adjournment_count
+[HASH]     case:69cede1225cde8be2333565e:info
+[STRING]   case:69cede1225cde8be2333565e:last_update
+[STRING]   case:69cede1225cde8be2333565e:next_hearing
+[STRING]   case:69cede1225cde8be2333565e:status
+[STRING]   case:69cede4a5831cc2d60578ec7:adjournment_count
+[HASH]     case:69cede4a5831cc2d60578ec7:info
+[STRING]   case:69cede4a5831cc2d60578ec7:last_update
+[STRING]   case:69cede4a5831cc2d60578ec7:next_hearing
+[STRING]   case:69cede4a5831cc2d60578ec7:status
+[STRING]   hearing_reminder:last_scan
+[STRING]   hearing_reminder:last_scan_at
+[HASH]     leaderboard:court:69ca0c65f82443e91d1daaa7
+[HASH]     leaderboard:court:69ca0c65f82443e91d1daaa8
+[HASH]     leaderboard:court:69ca0c65f82443e91d1daaa9
+[HASH]     leaderboard:court:69ca0c65f82443e91d1daaaa
+[HASH]     leaderboard:court:69ca0c65f82443e91d1daaab
+[HASH]     leaderboard:court:69ca0c65f82443e91d1daaac
+[HASH]     leaderboard:court:69ca0c65f82443e91d1daaad
+[HASH]     leaderboard:court:69ca0c65f82443e91d1daaae
+[ZSET]     leaderboard:courts
+[STRING]   leaderboard:last_refresh
+[HASH]     leaderboard:system_stats
+
+Total keys: 49
+[03:05:22] [32mINFO[39m: [36mRedis connection closed[39m

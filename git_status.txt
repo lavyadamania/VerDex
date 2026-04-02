@@ -1,0 +1,48 @@
+﻿On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   backend/src/app.js
+	modified:   backend/src/models/User.js
+	modified:   backend/src/utils/caseCache.js
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	backend/src/routes/admin.routes.js
+	backend/src/routes/alert.routes.js
+	backend/src/routes/disclosure.routes.js
+	backend/src/routes/errorDetection.routes.js
+	backend/src/routes/leaderboard.routes.js
+	backend/src/routes/public.routes.js
+	backend/src/routes/sse.routes.js
+	backend/src/routes/verification.routes.js
+	backend/src/services/
+	backend/src/tests/project_health.txt
+	backend/src/tests/redis_keys.txt
+	backend/src/tests/stage15_results.txt
+	backend/src/tests/stage16_results.txt
+	backend/src/tests/stage18_results.txt
+	backend/src/tests/testAdminDashboard.js
+	backend/src/tests/testDisclosure.js
+	backend/src/tests/testErrorDetection.js
+	backend/src/tests/testHearingReminder.js
+	backend/src/tests/testLeaderboard.js
+	backend/src/tests/testPublicDashboard.js
+	backend/src/tests/testSSE.js
+	backend/src/tests/testVerification.js
+	backend/src/tests/test_disclosure_output.txt
+	backend/src/tests/test_output.txt
+	backend/src/tests/test_output_utf8.txt
+	backend/src/tests/test_public_output.txt
+	backend/src/tests/test_verification_output.txt
+	backend/src/workers/hearingReminder.js
+	backend/src/workers/leaderboardRefresh.js
+	backend/test17_results.txt
+	backend/test_results.txt
+	backend/test_results_utf8.txt
+	backend/test_stage17_output.txt
+	git_status.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")

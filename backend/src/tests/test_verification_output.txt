@@ -1,0 +1,95 @@
+﻿ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  ≡ƒº¬ Stage 13 Test ΓÇö 4-Layer Verification System
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+[01:50:18] [32mINFO[39m: [36mΓ£à MongoDB connected ΓÇö mongodb://localhost:27017/court_transparency[39m
+[01:50:18] [32mINFO[39m: [36mConnecting to Redis via URL...[39m
+
+≡ƒöº Setting up test data...
+
+   Γ£à Test court created
+   Γ£à 3 test users created (unverified, otp_verified, admin)
+   Γ£à 1 test case created
+
+   --- Verification Level Constants ---
+
+   Γ£à PASS: unverified = 0
+   Γ£à PASS: otp_verified = 1
+   Γ£à PASS: document_verified = 2
+   Γ£à PASS: fully_verified = 3
+
+   --- Layer 1: CNR Format Validation ---
+
+   Γ£à PASS: Standard 16-char CNR is valid
+   Γ£à PASS: Hyphenated CNR is valid
+   Γ£à PASS: Flexible alphanumeric CNR is valid
+   Γ£à PASS: Empty CNR is invalid
+   Γ£à PASS: Empty CNR has error message
+   Γ£à PASS: Too-short CNR is invalid
+   Γ£à PASS: Too-long CNR is invalid
+   Γ£à PASS: CNR with special chars is invalid
+
+   --- Full CNR Validation (with DB) ---
+
+   Γ£à PASS: New CNR is valid format
+   Γ£à PASS: New CNR does not exist in DB
+   Γ£à PASS: Existing CNR format is valid
+   Γ£à PASS: Existing CNR found in DB
+   Γ£à PASS: Existing CNR returns case_id
+
+   --- Layer 3: Advocate Confirmation ---
+
+   Γ£à PASS: Advocate name stored
+   Γ£à PASS: Bar council ID stored
+   Γ£à PASS: Advocate phone stored
+   Γ£à PASS: Advocate confirmed flag set
+   Γ£à PASS: Advocate confirmed_at is set
+   Γ£à PASS: Verification status unchanged after advocate confirm
+
+   --- Layer 4: Document Verification ---
+
+   Γ£à PASS: ID proof document created
+   Γ£à PASS: Document status is pending
+   Γ£à PASS: Upgrade denied without verified doc
+   Γ£à PASS: Upgrade message mentions document
+   Γ£à PASS: Document verified by admin
+   Γ£à PASS: Upgrade succeeded: otp_verified ΓåÆ document_verified
+   Γ£à PASS: Previous status was otp_verified
+   Γ£à PASS: New status is document_verified
+   Γ£à PASS: Upgrade succeeded: document_verified ΓåÆ fully_verified
+   Γ£à PASS: Previous status was document_verified
+   Γ£à PASS: New status is fully_verified
+   Γ£à PASS: No upgrade when already fully_verified
+   Γ£à PASS: Message says already verified
+   Γ£à PASS: User is now fully_verified in DB
+
+   --- Verification Status ---
+
+   Γ£à PASS: Unverified user level = 0
+   Γ£à PASS: Unverified user has next step
+   Γ£à PASS: Layer 2 OTP pending for unverified
+   Γ£à PASS: Fully verified user level = 3
+   Γ£à PASS: Fully verified flag is true
+   Γ£à PASS: Layer 2 OTP completed
+   Γ£à PASS: Layer 3 advocate completed
+   Γ£à PASS: Layer 4 document completed
+
+   --- Admin Functions ---
+
+   Γ£à PASS: Admin override succeeded
+   Γ£à PASS: Override reflected in DB
+   Γ£à PASS: Invalid status throws error
+
+≡ƒº╣ Cleaning up test data...
+   Γ£à All test data cleaned up
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+   ≡ƒôï Test Results: 48 passed, 0 failed
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+Γ£à All Stage 13 tests PASSED!
+[01:50:18] [32mINFO[39m: [36mΓ£à Redis connected (real Redis server)[39m
+[01:50:18] [32mINFO[39m: [36mΓÜû∩╕Å Advocate confirmation submitted for user vtest_otp_1775074818559@test.com: Advocate Test Singh[39m
+[01:50:18] [32mINFO[39m: [36m≡ƒöô User vtest_otp_1775074818559@test.com upgraded: otp_verified ΓåÆ document_verified[39m
+[01:50:18] [32mINFO[39m: [36m≡ƒöô User vtest_otp_1775074818559@test.com upgraded: document_verified ΓåÆ fully_verified[39m
+[01:50:18] [32mINFO[39m: [36m≡ƒöº Admin override: vtest_unverified_1775074818557@test.com ΓåÆ fully_verified (by admin 69cd7e022eaf425dfb1f6bc3)[39m
+[01:50:18] [32mINFO[39m: [36m≡ƒöº Admin override: vtest_unverified_1775074818557@test.com ΓåÆ unverified (by admin 69cd7e022eaf425dfb1f6bc3)[39m

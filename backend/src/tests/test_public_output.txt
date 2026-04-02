@@ -1,0 +1,75 @@
+﻿ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  ≡ƒº¬ Stage 15 Test ΓÇö Public Dashboard API
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+[02:00:25] [32mINFO[39m: [36mΓ£à MongoDB connected ΓÇö mongodb://localhost:27017/court_transparency[39m
+[02:00:25] [32mINFO[39m: [36mConnecting to Redis via URL...[39m
+
+≡ƒöº Setting up test data...
+
+   Γ£à 2 courts, 1 user, 15 cases created
+
+   --- Anonymized Case Listing ---
+
+   Γ£à PASS: Got anonymized cases
+   Γ£à PASS: NO private data leaks in case listing
+   Γ£à PASS: Has masked_id
+   Γ£à PASS: Has case_type
+   Γ£à PASS: Has filing_date
+   Γ£à PASS: Has current_status
+   Γ£à PASS: Has days_pending (number)
+   Γ£à PASS: Has adjournment_count
+   Γ£à PASS: Has delay_risk_score
+   Γ£à PASS: Masked ID format CT-XXXXXX
+
+   --- Disclosure Respected ---
+
+   Γ£à PASS: Disclosed accused_name appears for partial case
+   Γ£à PASS: Private case has NO accused_name
+   Γ£à PASS: Private case has NO judge_name
+   Γ£à PASS: Private case has NO victim_statement
+
+   --- Masked ID Lookup ---
+
+   Γ£à PASS: Masked ID generated
+   Γ£à PASS: Masked ID starts with CT-
+   Γ£à PASS: Case found by masked ID suffix
+   Γ£à PASS: Found correct case
+
+   --- System Statistics ---
+
+   Γ£à PASS: Total cases counted
+   Γ£à PASS: Resolved cases counted
+   Γ£à PASS: Pending cases = total - resolved
+   Γ£à PASS: Status breakdown has entries
+   Γ£à PASS: Type breakdown has entries
+   Γ£à PASS: No private data in stats
+
+   --- Court Performance ---
+
+   Γ£à PASS: Court name visible
+   Γ£à PASS: Court type visible
+   Γ£à PASS: District visible
+   Γ£à PASS: State visible
+   Γ£à PASS: Total cases filed available
+   Γ£à PASS: Total cases resolved available
+   Γ£à PASS: Pending computed correctly
+   Γ£à PASS: Resolution rate computed
+   Γ£à PASS: Multiple courts listable
+   Γ£à PASS: No private data in court listing
+
+   --- CRITICAL: Privacy Guarantee ---
+
+   Γ£à PASS: ZERO privacy leaks across all cases
+   Γ£à PASS: victim_user NOT in anonymized output
+   Γ£à PASS: _id NOT in anonymized output
+   Γ£à PASS: advocate_contact NOT in anonymized output
+
+≡ƒº╣ Cleaning up test data...
+[02:00:25] [32mINFO[39m: [36mΓ£à Redis connected (real Redis server)[39m
+   Γ£à All test data cleaned up
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+   ≡ƒôï Test Results: 38 passed, 0 failed
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+Γ£à All Stage 15 tests PASSED!

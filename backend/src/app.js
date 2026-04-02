@@ -14,6 +14,8 @@ const { connectRedis, disconnectRedis, getRedis, isMemoryStore } = require('./co
 const logger = require('./utils/logger');
 const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
 const { startDelayDetectionScheduler, stopDelayDetectionScheduler } = require('./workers/delayDetection');
+const { startHearingReminderScheduler, stopHearingReminderScheduler } = require('./workers/hearingReminder');
+const { startLeaderboardRefreshScheduler, stopLeaderboardRefreshScheduler } = require('./workers/leaderboardRefresh');
 
 // ── Create Express app ──
 const app = express();
@@ -124,7 +126,63 @@ app.get('/api', (req, res) => {
         history: 'GET /api/delays/history/:caseId',
         redisSets: 'GET /api/delays/redis-sets',
       },
-      disclosure: '/api/disclosure/* (Stage 14)',
+      alerts: {
+        list: 'GET /api/alerts',
+        unreadCount: 'GET /api/alerts/count',
+        markRead: 'PATCH /api/alerts/:id/read',
+        markAllRead: 'PATCH /api/alerts/read-all',
+        dismiss: 'PATCH /api/alerts/:id/dismiss',
+        adminAll: 'GET /api/alerts/admin/all',
+      },
+      leaderboard: {
+        rankings: 'GET /api/leaderboard',
+        stats: 'GET /api/leaderboard/stats',
+        courtAnalytics: 'GET /api/leaderboard/court/:id',
+        refresh: 'POST /api/leaderboard/refresh',
+      },
+      verification: {
+        validateCnr: 'POST /api/verification/validate-cnr',
+        status: 'GET /api/verification/status',
+        advocate: 'POST /api/verification/advocate',
+        uploadId: 'POST /api/verification/upload-id/:caseId',
+        requestUpgrade: 'POST /api/verification/request-upgrade',
+        adminOverride: 'PATCH /api/verification/admin/:userId',
+        adminUsers: 'GET /api/verification/admin/users',
+      },
+      disclosure: {
+        fields: 'GET /api/disclosure/fields',
+        submit: 'POST /api/disclosure/request',
+        myRequests: 'GET /api/disclosure/my-requests',
+        caseHistory: 'GET /api/disclosure/case/:caseId',
+        review: 'PATCH /api/disclosure/:id/review',
+        revoke: 'POST /api/disclosure/:id/revoke',
+        adminPending: 'GET /api/disclosure/admin/pending',
+      },
+      public: {
+        cases: 'GET /api/public/cases',
+        caseDetail: 'GET /api/public/cases/:maskedId',
+        stats: 'GET /api/public/stats',
+        courts: 'GET /api/public/courts',
+        courtDetail: 'GET /api/public/courts/:id',
+      },
+      admin: {
+        stats: 'GET /api/admin/stats',
+        allCases: 'GET /api/admin/cases',
+        stuckCases: 'GET /api/admin/stuck-cases',
+        courtAnalytics: 'GET /api/admin/court-analytics',
+        auditLogs: 'GET /api/admin/audit-logs',
+        users: 'GET /api/admin/users',
+      },
+      errors: {
+        scanCase: 'POST /api/errors/scan/:caseId',
+        scanAll: 'POST /api/errors/scan-all',
+        summary: 'GET /api/errors/summary',
+        casesWithErrors: 'GET /api/errors/cases',
+      },
+      sse: {
+        events: 'GET /api/sse/events?token=JWT',
+        status: 'GET /api/sse/status',
+      },
     },
   });
 });
@@ -135,6 +193,14 @@ app.use('/api/cases', require('./routes/case.routes'));
 app.use('/api/courts', require('./routes/court.routes'));
 app.use('/api/documents', require('./routes/document.routes'));
 app.use('/api/delays', require('./routes/delay.routes'));
+app.use('/api/alerts', require('./routes/alert.routes'));
+app.use('/api/leaderboard', require('./routes/leaderboard.routes'));
+app.use('/api/verification', require('./routes/verification.routes'));
+app.use('/api/disclosure', require('./routes/disclosure.routes'));
+app.use('/api/public', require('./routes/public.routes'));
+app.use('/api/admin', require('./routes/admin.routes'));
+app.use('/api/errors', require('./routes/errorDetection.routes'));
+app.use('/api/sse', require('./routes/sse.routes'));
 
 // ── 404 handler ──
 app.use(notFoundHandler);
@@ -174,6 +240,12 @@ async function startServer() {
     startDelayDetectionScheduler().catch(err => {
       logger.error({ err }, 'Failed to start delay detection scheduler');
     });
+    startHearingReminderScheduler().catch(err => {
+      logger.error({ err }, 'Failed to start hearing reminder scheduler');
+    });
+    startLeaderboardRefreshScheduler().catch(err => {
+      logger.error({ err }, 'Failed to start leaderboard refresh scheduler');
+    });
   });
 
   // ── Graceful Shutdown ──
@@ -182,6 +254,8 @@ async function startServer() {
     server.close(async () => {
       logger.info('HTTP server closed');
       await stopDelayDetectionScheduler();
+      await stopHearingReminderScheduler();
+      await stopLeaderboardRefreshScheduler();
       await disconnectRedis();
       await closeDB();
       logger.info('Goodbye! 👋');

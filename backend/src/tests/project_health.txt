@@ -1,0 +1,18 @@
+﻿Testing connections...
+MongoDB: OK
+[02:59:14] [32mINFO[39m: [36mΓ£à MongoDB connected ΓÇö mongodb://localhost:27017/court_transparency[39m
+[02:59:14] [32mINFO[39m: [36mConnecting to Redis via URL...[39m
+Redis: Real Redis
+[02:59:14] [32mINFO[39m: [36mΓ£à Redis connected (real Redis server)[39m
+--- Database Stats ---
+Users: 4
+Cases: 6
+Courts: 8
+CaseEvents: 14
+Documents: 2
+Alerts: 0
+AuditLogs: 34
+DisclosureRequests: 0
+[02:59:14] [32mINFO[39m: [36mRedis connection closed[39m
+[02:59:14] [33mWARN[39m: [36mMongoDB disconnected[39m
+[02:59:14] [32mINFO[39m: [36mMongoDB connection closed[39m

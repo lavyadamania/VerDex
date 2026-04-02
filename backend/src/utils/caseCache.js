@@ -17,6 +17,7 @@ const { getRedis } = require('../config/redis');
 const Case = require('../models/Case');
 const Court = require('../models/Court');
 const logger = require('./logger');
+const { publishToUser } = require('../services/eventPublisher');
 
 /**
  * Sync a single case's key fields to Redis.
@@ -62,6 +63,17 @@ async function syncCaseToRedis(caseDoc) {
     await updateDelayRiskSets(caseId, caseDoc);
 
     logger.info(`🔄 Redis synced: case:${caseId} → status=${data.status}`);
+
+    // ── Publish real-time case update via Pub/Sub ──
+    if (caseDoc.victim_user) {
+      publishToUser(caseDoc.victim_user, 'case_update', {
+        caseId,
+        cnr_number: caseDoc.cnr_number || '',
+        status: data.status,
+        next_hearing: data.next_hearing,
+        delay_risk_score: data.delay_risk_score,
+      }).catch(() => {}); // Fire-and-forget
+    }
   } catch (err) {
     // Never break the request if Redis sync fails
     logger.error({ err }, `Failed to sync case ${caseDoc._id} to Redis`);

@@ -1,0 +1,59 @@
+﻿node : node:internal/modul
+es/cjs/loader:1423
+At line:1 char:1
++ node src/tests/testDelay
+Detection.js > 
+test_output.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (n  
+  ode:internal/modules/   
+ cjs/loader:1423:Strin    
+g) [], RemoteExceptio    n
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+  throw err;
+  ^
+
+Error: Cannot find module 
+'C:\Users\Lavya\Desktop\no
+sql project\backend\src\te
+sts\src\tests\testDelayDet
+ection.js'
+    at 
+Module._resolveFilename (n
+ode:internal/modules/cjs/l
+oader:1420:15)
+    at defaultResolveImpl 
+(node:internal/modules/cjs
+/loader:1058:19)
+    at 
+resolveForCJSWithHooks (no
+de:internal/modules/cjs/lo
+ader:1063:22)
+    at Module._load (node:
+internal/modules/cjs/loade
+r:1226:37)
+    at 
+TracingChannel.traceSync (
+node:diagnostics_channel:3
+22:14)
+    at wrapModuleLoad (nod
+e:internal/modules/cjs/loa
+der:244:24)
+    at Module.executeUserE
+ntryPoint [as runMain] (no
+de:internal/modules/run_ma
+in:154:5)
+    at node:internal/main/
+run_main_module:33:47 {
+  code: 
+'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v24.8.0

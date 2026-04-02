@@ -1,0 +1,70 @@
+﻿ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  ≡ƒº¬ Stage 10 Test ΓÇö Delay Detection Engine
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+[01:16:28] [32mINFO[39m: [36mΓ£à MongoDB connected ΓÇö mongodb://localhost:27017/court_transparency[39m
+[01:16:28] [32mINFO[39m: [36mConnecting to Redis via URL...[39m
+
+≡ƒöº Setting up test data...
+
+   Γ£à Court created: 69cd76148de7b821e207094f
+   Γ£à User created: 69cd76148de7b821e2070951
+   Γ£à Case 1 (35d old): 69cd76148de7b821e2070953 ΓÇö expecting WARNING
+   Γ£à Case 2 (70d old): 69cd76148de7b821e2070955 ΓÇö expecting HIGH RISK
+   Γ£à Case 3 (120d old): 69cd76148de7b821e2070957 ΓÇö expecting CRITICAL + stagnation
+   Γ£à Case 4 (10d old): 69cd76148de7b821e2070959 ΓÇö expecting NO delay
+
+≡ƒÜÇ Running delay detection scan...
+
+[01:16:28] [32mINFO[39m: [36mΓ£à Redis connected (real Redis server)[39m
+[01:16:28] [32mINFO[39m: [36mΓÅ▒∩╕Å Delay detection scan starting...[39m
+[01:16:28] [32mINFO[39m: [36m≡ƒôè Scanning 10 active cases...[39m
+[01:16:29] [32mINFO[39m: [36m≡ƒöä Redis synced: case:69cd76148de7b821e2070955 ΓåÆ status=evidence[39m
+[01:16:29] [32mINFO[39m: [36m≡ƒöä Redis synced: case:69cd76148de7b821e2070957 ΓåÆ status=filed[39m
+
+≡ƒôè Scan Summary: {
+  "scanned": 10,
+  "updated": 3,
+  "warnings": 1,
+  "highRisk": 1,
+  "critical": 1,
+  "alertsCreated": 3,
+  "elapsed_seconds": 0.74,
+  "timestamp": "2026-04-01T19:46:28.848Z"
+}
+
+≡ƒöì Verifying results...
+
+   Γ£à PASS: Case 1 (35d) score in WARNING range (3-5)
+   Γ£à PASS: Case 2 (70d) score in HIGH range (6-8)
+   Γ£à PASS: Case 3 (120d) score in CRITICAL range (9-10)
+   Γ£à PASS: Case 4 (10d) score is 0 (no delay)
+   Γ£à PASS: Case 3 stagnation_flag is TRUE
+   Γ£à PASS: Case 1 stagnation_flag is FALSE
+[01:16:29] [32mINFO[39m: [36m≡ƒöä Redis synced: case:69cd76148de7b821e2070953 ΓåÆ status=hearing[39m
+[01:16:29] [32mINFO[39m: [36mΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ[39m
+[01:16:29] [32mINFO[39m: [36m  ΓÅ▒∩╕Å  Delay Detection Scan Complete[39m
+[01:16:29] [32mINFO[39m: [36m     Scanned:  10 active cases[39m
+[01:16:29] [32mINFO[39m: [36m     Updated:  3 risk scores[39m
+[01:16:29] [32mINFO[39m: [36m     ΓÜá∩╕Å  Warning:  1[39m
+[01:16:29] [32mINFO[39m: [36m     ≡ƒö┤ High Risk: 1[39m
+[01:16:29] [32mINFO[39m: [36m     ≡ƒÜ¿ Critical:  1[39m
+[01:16:29] [32mINFO[39m: [36m     ≡ƒöö Alerts:    3 created[39m
+[01:16:29] [32mINFO[39m: [36m     ΓÅ▒∩╕Å  Time:      0.74s[39m
+[01:16:29] [32mINFO[39m: [36mΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ[39m
+   Γ£à PASS: Case 1 is in delay:warning set
+   Γ£à PASS: Case 2 is in delay:high_risk set
+   Γ£à PASS: Case 3 is in delay:critical set
+   Γ£à PASS: Case 4 is NOT in any delay set
+   Γ£à PASS: Alerts created for delayed cases (at least 3)
+   Γ£à PASS: Has delay_warning alert
+   Γ£à PASS: Has delay_high_risk alert
+   Γ£à PASS: Has delay_critical alert
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+   ≡ƒôï Test Results: 14 passed, 0 failed
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+≡ƒº╣ Cleaning up test data...
+   Γ£à All test data cleaned up
+
+Γ£à All Stage 10 tests PASSED!

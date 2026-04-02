@@ -1,0 +1,92 @@
+═══════════════════════════════════════════════════
+  🧪 Stage 17 Test — Error Detection & Validation
+═══════════════════════════════════════════════════
+[02:36:41] [32mINFO[39m: [36m✅ MongoDB connected — mongodb://localhost:27017/court_transparency[39m
+[02:36:41] [32mINFO[39m: [36mConnecting to Redis via URL...[39m
+
+🔧 Setting up test data...
+
+[02:36:41] [32mINFO[39m: [36m✅ Redis connected (real Redis server)[39m
+   ✅ 1 user, 1 court, 8 cases (A-H), events, docs created
+
+   --- Test 1: Date Sequence Checks ---
+
+   ✅ PASS: Case A: detects future filing date
+   ✅ PASS: Case B: detects future hearing on disposed case
+   ✅ PASS: Case C: detects past next_hearing on active case
+   ✅ PASS: Case H (clean): no date sequence errors
+
+   --- Test 2: Impossible Timeline ---
+
+   ✅ PASS: Case D: detects events before filing date
+   ✅ PASS: Case D: detects hearing after judgment
+   ✅ PASS: Case H (clean): no timeline errors
+
+   --- Test 3: Status Mismatch ---
+
+   ✅ PASS: Case E: detects judgment status w/o judgment event
+   ✅ PASS: Case F: detects filed status with hearings
+   ✅ PASS: Case H (clean): no status mismatch
+
+   --- Test 4: Counter Mismatch ---
+
+   ✅ PASS: Case F: detects hearing count mismatch
+   ✅ PASS: Case F: detects adjournment count mismatch
+   ✅ PASS: Case H (clean): no counter mismatch
+
+   --- Test 5: Document Mismatch ---
+
+   ✅ PASS: Case G: detects judgment doc vs hearing status
+   ✅ PASS: Case G: detects long-pending unverified doc
+   ✅ PASS: Case H (clean): no document mismatch
+
+   --- Test 6: Full Case Scan ---
+
+   ✅ PASS: Case F scan: errors array is populated
+   ✅ PASS: Case F scan: has cnr_number
+   ✅ PASS: Case F scan: has caseId
+   ✅ PASS: Case F scan: alerts were created
+   ✅ PASS: Case F: error_detected alerts exist in DB
+[02:36:41] [32mINFO[39m: [36m🔔 Alert created: [medium] error_detected for user 69ceda61df3c4c9f39da68ee — Status "filed" but hearings exist — ERR-F-1775164001766[39m
+[02:36:41] [34mDEBUG[39m: [36mAlert deduped: error_detected for case 69ceda61df3c4c9f39da6902 (existing from Fri Apr 03 2026 02:36:41 GMT+0530 (India Standard Time))[39m
+[02:36:41] [34mDEBUG[39m: [36mAlert deduped: error_detected for case 69ceda61df3c4c9f39da6902 (existing from Fri Apr 03 2026 02:36:41 GMT+0530 (India Standard Time))[39m
+[02:36:41] [32mINFO[39m: [36m🔍 Error scan: ERR-F-1775164001766 — 3 error(s) found, 1 alert(s) created[39m
+   ✅ PASS: Case H (clean): full scan finds 0 errors
+   ✅ PASS: Case H (clean): no alerts created
+
+   --- Test 7: Bulk Scan & Summary ---
+
+[02:36:41] [32mINFO[39m: [36m🔍 Error scan: ERR-H-1775164001772 — 0 error(s) found, 0 alert(s) created[39m
+[02:36:41] [32mINFO[39m: [36m🔍 Starting bulk error scan on 14 active cases...[39m
+[02:36:41] [32mINFO[39m: [36m🔍 Error scan: MHMU01-000102-2023 — 2 error(s) found, 0 alert(s) created[39m
+[02:36:41] [32mINFO[39m: [36m🔍 Error scan: DLSD02-000045-2024 — 3 error(s) found, 0 alert(s) created[39m
+[02:36:41] [32mINFO[39m: [36m🔍 Error scan: KABB01-000078-2025 — 2 error(s) found, 0 alert(s) created[39m
+[02:36:41] [32mINFO[39m: [36m🔍 Error scan: ERR-A-1775164001759 — 1 error(s) found, 0 alert(s) created[39m
+[02:36:41] [32mINFO[39m: [36m🔍 Error scan: ERR-F-1775164001766 — 3 error(s) found, 0 alert(s) created[39m
+[02:36:41] [32mINFO[39m: [36m🔍 Error scan: DLND01-000001-2024 — 2 error(s) found, 0 alert(s) created[39m
+[02:36:41] [32mINFO[39m: [36m🔍 Error scan: DLND01-TEST-2026 — 0 error(s) found, 0 alert(s) created[39m
+[02:36:41] [32mINFO[39m: [36m🔍 Error scan: ERR-C-1775164001761 — 2 error(s) found, 0 alert(s) created[39m
+[02:36:41] [32mINFO[39m: [36m🔍 Error scan: ERR-G-1775164001768 — 5 error(s) found, 0 alert(s) created[39m
+   ✅ PASS: Bulk scan: totalCasesScanned > 0
+   ✅ PASS: Bulk scan: has totalErrors
+   ✅ PASS: Bulk scan: has casesWithErrors
+   ✅ PASS: Bulk scan: results is array
+   ✅ PASS: Summary: has total_error_alerts
+   ✅ PASS: Summary: has unresolved_errors
+   ✅ PASS: Summary: has by_severity
+   ✅ PASS: Summary: total_error_alerts > 0 (from test 6)
+
+🧹 Cleaning up test data...
+   ✅ All test data cleaned up
+
+═══════════════════════════════════════════════════
+   📋 Test Results: 31 passed, 0 failed
+═══════════════════════════════════════════════════
+
+✅ All Stage 17 tests PASSED!
+[02:36:41] [32mINFO[39m: [36m🔍 Error scan: ERR-H-1775164001772 — 0 error(s) found, 0 alert(s) created[39m
+[02:36:41] [32mINFO[39m: [36m🔍 Error scan: ERR-B-1775164001760 — 3 error(s) found, 0 alert(s) created[39m
+[02:36:41] [32mINFO[39m: [36m🔍 Error scan: ERR-D-1775164001762 — 3 error(s) found, 0 alert(s) created[39m
+[02:36:41] [32mINFO[39m: [36m🔍 Error scan: ERR-E-1775164001765 — 2 error(s) found, 0 alert(s) created[39m
+[02:36:41] [32mINFO[39m: [36m🔍 Error scan: DLCD03-000200-2022 — 2 error(s) found, 0 alert(s) created[39m
+[02:36:41] [32mINFO[39m: [36m🔍 Bulk scan complete: 14 cases scanned, 30 errors, 0 alerts[39m

@@ -36,6 +36,14 @@ const userSchema = new mongoose.Schema({
   otp_expires_at: Date,
   last_login: Date,
   is_active: { type: Boolean, default: true },
+
+  // ── Advocate Confirmation (Layer 3 Verification) ──
+  advocate_name: String,
+  bar_council_id: String,
+  advocate_phone: String,
+  advocate_email: String,
+  advocate_confirmed: { type: Boolean, default: false },
+  advocate_confirmed_at: Date,
 }, {
   timestamps: true,
 });

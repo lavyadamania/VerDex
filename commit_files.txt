@@ -1,0 +1,45 @@
+﻿commit 6a3681634c2bc45250054ac5747a9dbb2ea8543e
+Author: Anand Dangi <ananddangii20@gmail.com>
+Date:   Mon Mar 30 21:12:45 2026 +0530
+
+    Created & connected Frontend
+
+M	backend/package-lock.json
+M	frontend/package-lock.json
+M	frontend/package.json
+A	frontend/postcss.config.js
+M	frontend/src/App.jsx
+A	frontend/src/components/ProtectedRoute.jsx
+A	frontend/src/components/charts/DelayDistributionChart.jsx
+A	frontend/src/components/charts/StatusBarChart.jsx
+A	frontend/src/components/ui/Badge.jsx
+A	frontend/src/components/ui/Card.jsx
+A	frontend/src/components/ui/EmptyState.jsx
+A	frontend/src/components/ui/Loader.jsx
+A	frontend/src/components/ui/Skeleton.jsx
+A	frontend/src/components/ui/Table.jsx
+A	frontend/src/components/ui/Timeline.jsx
+A	frontend/src/context/AuthContext.jsx
+A	frontend/src/context/auth-context.js
+A	frontend/src/hooks/useAuth.js
+A	frontend/src/hooks/useTheme.js
+M	frontend/src/index.css
+A	frontend/src/layouts/AppShell.jsx
+A	frontend/src/layouts/Sidebar.jsx
+A	frontend/src/layouts/TopNavbar.jsx
+M	frontend/src/main.jsx
+A	frontend/src/pages/AdminDashboardPage.jsx
+A	frontend/src/pages/LandingPage.jsx
+A	frontend/src/pages/LoginPage.jsx
+A	frontend/src/pages/PublicDashboardPage.jsx
+A	frontend/src/pages/RegisterPage.jsx
+A	frontend/src/pages/UnauthorizedPage.jsx
+A	frontend/src/pages/VictimDashboardPage.jsx
+A	frontend/src/services/api.js
+A	frontend/src/services/authService.js
+A	frontend/src/services/caseService.js
+A	frontend/src/services/courtService.js
+A	frontend/src/utils/formatters.js
+A	frontend/src/utils/risk.js
+A	frontend/tailwind.config.js
+M	frontend/vite.config.js
