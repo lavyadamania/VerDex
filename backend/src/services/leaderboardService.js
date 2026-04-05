@@ -14,6 +14,8 @@ const Case = require('../models/Case');
 const Court = require('../models/Court');
 const { getRedis } = require('../config/redis');
 const logger = require('../utils/logger');
+const { computeDelayRisk } = require('../utils/delayRisk');
+const { updateCourtMapData, invalidateMapCache } = require('./courtMapService');
 
 // Redis key constants
 const REDIS_KEYS = {
@@ -218,6 +220,28 @@ async function computeLeaderboard() {
         total_cases_filed: totalFiled,
         total_cases_resolved: resolved,
       });
+
+      // ── Heatmap: compute delay risk & update mapdata ──
+      const adjournmentRate = totalCases > 0
+        ? parseFloat(((avgAdjournments / (totalCases || 1)) * 100).toFixed(2))
+        : 0;
+
+      const delayRisk = computeDelayRisk({
+        jsi_score: metrics.justice_speed_index,
+        stagnation_count: stagnantCount,
+      });
+
+      try {
+        await updateCourtMapData(courtId, {
+          delay_risk: delayRisk,
+          jsi_score: metrics.justice_speed_index,
+          pending_cases: pending,
+          adjournment_rate: adjournmentRate,
+          stagnation_count: stagnantCount,
+        });
+      } catch (mapErr) {
+        logger.error(`[Leaderboard] Map data update failed for ${courtId}: ${mapErr.message}`);
+      }
     }
 
     // Sort by JSI descending and assign ranks
@@ -248,6 +272,13 @@ async function computeLeaderboard() {
       await redis.hset(REDIS_KEYS.SYSTEM_STATS, field, String(value));
     }
     await redis.set(REDIS_KEYS.LAST_REFRESH, new Date().toISOString());
+
+    // ── Invalidate heatmap cache so next API call rebuilds fresh ──
+    try {
+      await invalidateMapCache();
+    } catch (cacheErr) {
+      logger.error(`[Leaderboard] Map cache invalidation failed: ${cacheErr.message}`);
+    }
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
 

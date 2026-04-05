@@ -1,0 +1,18 @@
+﻿[3:07:27 am] ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+[3:07:27 am]   ≡ƒº¬ STAGE 9 ΓÇö AI PIPELINE END-TO-END TEST
+[3:07:27 am] ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+[3:07:27 am] 
+[3:07:27 am] ΓöÇΓöÇ Test 1: Register test user ΓöÇΓöÇ
+[3:07:28 am]   Γ£à PASS: User registered: ai_test_1775252247751@test.com (ID: 69d03318dbec22a67f055c0c)
+[3:07:28 am] ΓöÇΓöÇ Test 2: Login ΓöÇΓöÇ
+[3:07:28 am]   Γ£à PASS: Logged in ΓÇö got JWT token
+[3:07:28 am] ΓöÇΓöÇ Test 3: Check AI service status ΓöÇΓöÇ
+[3:07:28 am]      Primary: gemini
+[3:07:28 am]      Fallback: groq
+[3:07:28 am]      Gemini: Γ£à Available
+[3:07:28 am]      Groq: Γ£à Available
+[3:07:28 am]   Γ£à PASS: AI is available
+[3:07:28 am] ΓöÇΓöÇ Test 4: Create court (via admin login) ΓöÇΓöÇ
+[3:07:28 am]   Γ£à PASS: Using existing court: Tis Hazari Court (ID: 69ca0c65f82443e91d1daaa9)
+[3:07:28 am] ΓöÇΓöÇ Test 5: Create a case ΓöÇΓöÇ
+[3:07:28 am]   Γ¥î FAIL: Case creation ΓÇö {"success":false,"error":"Verification required: minimum level is \"otp_verified\". Your level: \"unverified\""}

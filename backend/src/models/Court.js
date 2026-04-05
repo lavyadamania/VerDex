@@ -25,6 +25,11 @@ const courtSchema = new mongoose.Schema({
     trim: true,
   },
   pin_code: String,
+
+  // ── Geo Coordinates (for delay heatmap) ──
+  lat: { type: Number, default: null },
+  lng: { type: Number, default: null },
+
   total_cases_filed: { type: Number, default: 0 },
   total_cases_resolved: { type: Number, default: 0 },
 }, {

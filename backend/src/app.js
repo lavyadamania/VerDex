@@ -16,6 +16,8 @@ const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
 const { startDelayDetectionScheduler, stopDelayDetectionScheduler } = require('./workers/delayDetection');
 const { startHearingReminderScheduler, stopHearingReminderScheduler } = require('./workers/hearingReminder');
 const { startLeaderboardRefreshScheduler, stopLeaderboardRefreshScheduler } = require('./workers/leaderboardRefresh');
+const { startAIWorker, stopAIWorker } = require('./workers/aiProcessing');
+const aiService = require('./services/aiService');
 
 // ── Create Express app ──
 const app = express();
@@ -118,6 +120,9 @@ app.get('/api', (req, res) => {
         list: 'GET /api/courts',
         get: 'GET /api/courts/:id',
         leaderboard: 'GET /api/courts/leaderboard/rank',
+        map: 'GET /api/courts/map',
+        mapStats: 'GET /api/courts/map/stats',
+        mapDetail: 'GET /api/courts/map/:id',
       },
       delays: {
         summary: 'GET /api/delays/summary',
@@ -183,6 +188,15 @@ app.get('/api', (req, res) => {
         events: 'GET /api/sse/events?token=JWT',
         status: 'GET /api/sse/status',
       },
+      ai: {
+        status: 'GET /api/ai/status',
+        analyze: 'POST /api/ai/analyze/:documentId',
+        analyzeSync: 'POST /api/ai/analyze-sync/:documentId',
+        extractText: 'POST /api/ai/extract-text/:documentId',
+        summarize: 'POST /api/ai/summarize/:documentId',
+        classify: 'POST /api/ai/classify/:documentId',
+        queue: 'GET /api/ai/queue',
+      },
     },
   });
 });
@@ -190,6 +204,7 @@ app.get('/api', (req, res) => {
 // ── API Routes ──
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/cases', require('./routes/case.routes'));
+app.use('/api/courts/map', require('./routes/map.routes'));
 app.use('/api/courts', require('./routes/court.routes'));
 app.use('/api/documents', require('./routes/document.routes'));
 app.use('/api/delays', require('./routes/delay.routes'));
@@ -201,6 +216,7 @@ app.use('/api/public', require('./routes/public.routes'));
 app.use('/api/admin', require('./routes/admin.routes'));
 app.use('/api/errors', require('./routes/errorDetection.routes'));
 app.use('/api/sse', require('./routes/sse.routes'));
+app.use('/api/ai', require('./routes/ai.routes'));
 
 // ── 404 handler ──
 app.use(notFoundHandler);
@@ -226,6 +242,18 @@ async function startServer() {
   // Connect to Redis (or fallback to in-memory)
   await connectRedis();
 
+  // Geo-index courts for the delay heatmap
+  try {
+    const { geoAddAllCourts } = require('./services/courtMapService');
+    await geoAddAllCourts();
+  } catch (geoErr) {
+    logger.warn(`⚠️ Court geo-indexing failed on startup: ${geoErr.message}`);
+  }
+
+  // Initialize AI service
+  const aiStatus = aiService.initializeAI();
+  logger.info(`🤖 AI: Gemini=${aiStatus.geminiAvailable ? '✅' : '❌'} Groq=${aiStatus.groqAvailable ? '✅' : '❌'}`);
+
   // Start HTTP server
   const server = app.listen(env.PORT, '0.0.0.0', () => {
     logger.info('═══════════════════════════════════════════════════');
@@ -246,6 +274,9 @@ async function startServer() {
     startLeaderboardRefreshScheduler().catch(err => {
       logger.error({ err }, 'Failed to start leaderboard refresh scheduler');
     });
+    startAIWorker().catch(err => {
+      logger.error({ err }, 'Failed to start AI processing worker');
+    });
   });
 
   // ── Graceful Shutdown ──
@@ -256,6 +287,7 @@ async function startServer() {
       await stopDelayDetectionScheduler();
       await stopHearingReminderScheduler();
       await stopLeaderboardRefreshScheduler();
+      await stopAIWorker();
       await disconnectRedis();
       await closeDB();
       logger.info('Goodbye! 👋');

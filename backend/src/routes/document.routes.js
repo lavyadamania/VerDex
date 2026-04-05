@@ -104,6 +104,20 @@ router.post('/:caseId/upload', authenticate, denyVisitor, uploadLimiter, upload.
 
     logger.info(`📄 Document uploaded: ${req.file.originalname} → case ${caseDoc.cnr_number} by ${req.user.email} [${fileRef.provider}]`);
 
+    // ── Auto-trigger AI processing ──
+    let aiJob = null;
+    try {
+      const { enqueueAIJob } = require('../workers/aiProcessing');
+      aiJob = await enqueueAIJob({
+        documentId: document._id.toString(),
+        caseId: caseDoc._id.toString(),
+        filePath: fileRef.storagePath,
+        docType: doc_type,
+      });
+    } catch (aiErr) {
+      logger.warn({ aiErr }, '⚠️  AI auto-processing skipped');
+    }
+
     res.status(201).json({
       success: true,
       message: 'Document uploaded successfully',
@@ -118,6 +132,7 @@ router.post('/:caseId/upload', authenticate, denyVisitor, uploadLimiter, upload.
           storage_provider: fileRef.provider,
           createdAt: document.createdAt,
         },
+        ai_processing: aiJob || { enqueued: false, reason: 'AI not available' },
       },
     });
   } catch (err) {

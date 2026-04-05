@@ -7,9 +7,11 @@
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
     "migrate": "node src/models/migrate.js",
-    "seed": "node src/models/seed.js"
+    "seed": "node src/models/seed.js",
+    "seed:geo": "node src/seeds/courtGeoSeed.js"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^12.8.0",
     "bullmq": "^5.12.0",

@@ -44,6 +44,7 @@ class MemoryRedis {
   async zrange(key, start, stop) { const z = this.store.get(key) || []; const end = stop === -1 ? z.length : stop + 1; return z.slice(start, end).map(e => e.member); }
   async keys(pattern) { const re = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$'); return [...this.store.keys()].filter(k => re.test(k)); }
   async flushall() { this.store.clear(); this.ttls.clear(); return 'OK'; }
+  async geoadd(key, ...args) { if (!this.store.has(key)) this.store.set(key, []); const g = this.store.get(key); for (let i = 0; i < args.length - 2; i += 3) { const lng = parseFloat(args[i]); const lat = parseFloat(args[i+1]); const member = String(args[i+2]); const idx = g.findIndex(e => e.member === member); if (idx !== -1) { g[idx] = { member, lng, lat }; } else { g.push({ member, lng, lat }); } } return args.length / 3; }
   async publish() { return 0; }
   async subscribe() { return; }
   on() { return this; }

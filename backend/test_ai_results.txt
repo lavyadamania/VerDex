@@ -1,0 +1,129 @@
+﻿[3:09:04 am] ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+[3:09:04 am]   ≡ƒº¬ STAGE 9 ΓÇö AI PIPELINE END-TO-END TEST
+[3:09:04 am] ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+[3:09:04 am] 
+[3:09:04 am] ΓöÇΓöÇ Step 1: Register test user ΓöÇΓöÇ
+[3:09:05 am]   Γ£à PASS: Registered: ai_test_1775252344901@test.com (OTP: 407652)
+[3:09:05 am] ΓöÇΓöÇ Step 2: Login ΓöÇΓöÇ
+[3:09:05 am]   Γ£à PASS: Logged in ΓÇö JWT token acquired
+[3:09:05 am] ΓöÇΓöÇ Step 3: Verify OTP ΓöÇΓöÇ
+[3:09:05 am]   Γ£à PASS: OTP verified ΓÇö user is now otp_verified
+[3:09:05 am] ΓöÇΓöÇ Step 4: Check AI service status ΓöÇΓöÇ
+[3:09:05 am]      Primary: gemini
+[3:09:05 am]      Fallback: groq
+[3:09:05 am]      Gemini: Γ£à
+[3:09:05 am]      Groq: Γ£à
+[3:09:05 am]   Γ£à PASS: AI providers available
+[3:09:05 am] ΓöÇΓöÇ Step 5: Get a court for case creation ΓöÇΓöÇ
+[3:09:05 am]   Γ£à PASS: Using court: Tis Hazari Court (69ca0c65f82443e91d1daaa9)
+[3:09:05 am] ΓöÇΓöÇ Step 6: Create a case ΓöÇΓöÇ
+[3:09:05 am]   Γ£à PASS: Case created: MHMU01-344901-2025 (69d0337900687ae1df211a82)
+[3:09:05 am] ΓöÇΓöÇ Step 7: Upload court order document ΓöÇΓöÇ
+[3:09:05 am]      Doc ID: 69d0337900687ae1df211a91
+[3:09:05 am]      AI Enqueued: true
+[3:09:05 am]      AI Mode: bullmq
+[3:09:05 am]   Γ£à PASS: Document uploaded + AI auto-enqueued Γ£¿
+[3:09:05 am] ΓöÇΓöÇ Step 8: Waiting 20s for AI to process... ΓöÇΓöÇ
+[3:09:10 am]      ... 5s elapsed
+[3:09:15 am]      ... 10s elapsed
+[3:09:20 am]      ... 15s elapsed
+[3:09:25 am]      ... 20s elapsed
+[3:09:25 am] ΓöÇΓöÇ Step 9: Check Document for AI results ΓöÇΓöÇ
+[3:09:25 am]      extracted_text: Γ£à (1357 chars)
+[3:09:25 am]      ai_summary: Γ£à Present
+[3:09:25 am]      Preview: "IN THE COURT OF ADDITIONAL SESSIONS JUDGE
+DISTRICT COURT 4, MUMBAI
+
+Case Number: SC-2024-0847
+FIR No: 312/2024
+Date of O..."
+[3:09:25 am]   Γ£à PASS: Γ£¿ Text extraction WORKING
+[3:09:25 am]      ≡ƒôï Case stage: hearing
+[3:09:25 am]      ≡ƒôï Key decision: The court adjourned the case due to the defense counsel's absence and warned of action for repeated delays
+[3:09:25 am]      ≡ƒôï Next hearing: 2025-06-05
+[3:09:25 am]      ≡ƒôï Summary: The court was supposed to hear a witness, but the defense lawyer didn't show up again. The court is unhappy with the repeated delays and has warned the defense. The case will continue on June 5, 2025.
+[3:09:25 am]   Γ£à PASS: Γ£¿ Document summarization WORKING
+[3:09:25 am] ΓöÇΓöÇ Step 10: Check Case for AI updates ΓöÇΓöÇ
+[3:09:25 am]      Status: filed
+[3:09:25 am]      Adjournment Count: 1
+[3:09:25 am]      Last Update: 2026-04-03T21:39:06.877Z
+[3:09:25 am]      Timeline events: 2
+[3:09:25 am]      ΓåÆ [adjournment] Third consecutive hearing with defense counsel's absence without valid reason, d
+[3:09:25 am]        Reason: Defense counsel's absence
+[3:09:25 am]        Summary: The court was supposed to hear a witness, but the defense lawyer didn't show up again. The court is 
+[3:09:25 am]      ΓåÆ [filing] Case filed: AI Pipeline Test Case
+[3:09:25 am]   Γ£à PASS: Γ£¿ Case adjournment count updated by AI
+[3:09:25 am] ΓöÇΓöÇ Step 11: Test manual /extract-text ΓöÇΓöÇ
+[3:09:25 am]      Success: true
+[3:09:25 am]      Provider: local
+[3:09:25 am]      Chars: 1357
+[3:09:25 am]      Preview: "IN THE COURT OF ADDITIONAL SESSIONS JUDGE
+DISTRICT COURT 4, MUMBAI
+
+Case Number: SC-2024-0847
+FIR No..."
+[3:09:25 am]   Γ£à PASS: Γ£¿ Manual text extraction WORKS
+[3:09:25 am] ΓöÇΓöÇ Step 12: Test manual /summarize ΓöÇΓöÇ
+[3:09:26 am]      Provider: groq
+[3:09:26 am]      Case stage: hearing
+[3:09:26 am]      Key decision: The court adjourned the case due to the defense counsel's absence and warned of action for repeated delays
+[3:09:26 am]      Next hearing: 2025-06-05
+[3:09:26 am]      Summary: The court was supposed to hear a witness, but the defense lawyer didn't show up for the third time. The court is not happy about the delay and has warned the defense. The case will continue on June 5, 2025.
+[3:09:26 am]   Γ£à PASS: Γ£¿ Manual summarization WORKS
+[3:09:26 am] ΓöÇΓöÇ Step 13: Test manual /classify ΓöÇΓöÇ
+[3:09:27 am]      Provider: groq
+[3:09:27 am]      Is adjournment: true
+[3:09:27 am]      Reason: Defense counsel's absence
+[3:09:27 am]      Category: defense_absent
+[3:09:27 am]      Blamed party: defense
+[3:09:27 am]      Severity: major
+[3:09:27 am]      Confidence: 0.9
+[3:09:27 am]   Γ£à PASS: Γ£¿ Manual delay classification WORKS
+[3:09:27 am] 
+[3:09:27 am] ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+[3:09:27 am]   ≡ƒôè FINAL TEST RESULTS
+[3:09:27 am] ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+[3:09:27 am]   Γ£à Passes: 13
+[3:09:27 am]   Γ¥î Fails:  0
+[3:09:27 am] ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+node : Test runner fatal 
+error: Error: EBUSY: 
+resource busy or locked, 
+open 'C:\Users\Lavya\Deskt
+op\nosql project\backend\t
+est_ai_results.txt'
+At line:1 char:1
++ node 
+test_ai_pipeline.js 2>&1 
+| Out-File -Encoding utf8 
+test_ai_resul ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo        
+      : NotSpecified: (T  
+  est runner fat...ai_r   
+ esults.txt':String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+    at 
+Object.writeFileSync 
+(node:fs:2415:20)
+    at runTests (C:\Users\
+Lavya\Desktop\nosql projec
+t\backend\test_ai_pipeline
+.js:443:6)
+    at process.processTick
+sAndRejections (node:inter
+nal/process/task_queues:10
+5:5) {
+  errno: -4082,
+  code: 'EBUSY',
+  syscall: 'open',
+  path: 'C:\\Users\\Lavya\
+\Desktop\\nosql project\\b
+ackend\\test_ai_results.tx
+t'
+}
