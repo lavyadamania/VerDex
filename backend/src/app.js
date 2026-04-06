@@ -91,7 +91,7 @@ app.get('/health', async (req, res) => {
 app.get('/api', (req, res) => {
   res.json({
     success: true,
-    message: '🏛️ Court Transparency & Justice Accountability System API',
+    message: '[SYSTEM] Court Transparency & Justice Accountability System API',
     version: '1.0.0',
     database: 'MongoDB',
     endpoints: {
@@ -228,9 +228,9 @@ app.use(errorHandler);
 // SERVER STARTUP
 // ============================================================
 async function startServer() {
-  logger.info('═══════════════════════════════════════════════════');
-  logger.info('  🏛️  Court Transparency System — Starting...');
-  logger.info('═══════════════════════════════════════════════════');
+  logger.info('---------------------------------------------------');
+  logger.info('  [SYSTEM] Court Transparency System -- Starting...');
+  logger.info('---------------------------------------------------');
 
   // Connect to MongoDB
   const dbConnected = await connectDB();
@@ -247,22 +247,22 @@ async function startServer() {
     const { geoAddAllCourts } = require('./services/courtMapService');
     await geoAddAllCourts();
   } catch (geoErr) {
-    logger.warn(`⚠️ Court geo-indexing failed on startup: ${geoErr.message}`);
+    logger.warn(`[WARNING] Court geo-indexing failed on startup: ${geoErr.message}`);
   }
 
   // Initialize AI service
   const aiStatus = aiService.initializeAI();
-  logger.info(`🤖 AI: Gemini=${aiStatus.geminiAvailable ? '✅' : '❌'} Groq=${aiStatus.groqAvailable ? '✅' : '❌'}`);
+  logger.info(`[AI] AI: Gemini=${aiStatus.geminiAvailable ? '[SUCCESS]' : '[ERROR]'} Groq=${aiStatus.groqAvailable ? '[SUCCESS]' : '[ERROR]'}`);
 
   // Start HTTP server
   const server = app.listen(env.PORT, '0.0.0.0', () => {
-    logger.info('═══════════════════════════════════════════════════');
-    logger.info(`  🚀 Server running on http://localhost:${env.PORT}`);
-    logger.info(`  📊 Health: http://localhost:${env.PORT}/health`);
-    logger.info(`  📋 API:    http://localhost:${env.PORT}/api`);
-    logger.info(`  🌍 Env:    ${env.NODE_ENV}`);
-    logger.info(`  🗄️  DB:     MongoDB`);
-    logger.info('═══════════════════════════════════════════════════');
+    logger.info('---------------------------------------------------');
+    logger.info(`  [START] Server running on http://localhost:${env.PORT}`);
+    logger.info(`  [STATS] Health: http://localhost:${env.PORT}/health`);
+    logger.info(`  [LIST] API:    http://localhost:${env.PORT}/api`);
+    logger.info(`  [ENV] Env:    ${env.NODE_ENV}`);
+    logger.info(`  [DB] DB:     MongoDB`);
+    logger.info('---------------------------------------------------');
 
     // ── Start Background Workers ──
     startDelayDetectionScheduler().catch(err => {
@@ -290,7 +290,7 @@ async function startServer() {
       await stopAIWorker();
       await disconnectRedis();
       await closeDB();
-      logger.info('Goodbye! 👋');
+      logger.info('Goodbye! [GOODBYE]');
       process.exit(0);
     });
     setTimeout(() => {

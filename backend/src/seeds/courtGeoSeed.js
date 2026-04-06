@@ -155,9 +155,9 @@ const COURT_GEO_DATA = [
 // Seed function — upserts court geo coordinates
 // ============================================================
 async function seedCourtGeo() {
-  logger.info('═══════════════════════════════════════════════════');
-  logger.info('  🗺️  Court Geo Seed — Starting...');
-  logger.info('═══════════════════════════════════════════════════');
+  logger.info('---------------------------------------------------');
+  logger.info('  [GEO] Court Geo Seed — Starting...');
+  logger.info('---------------------------------------------------');
 
   const connected = await connectDB();
   if (!connected) {
@@ -191,10 +191,10 @@ async function seedCourtGeo() {
       if (result.createdAt && result.updatedAt &&
           result.createdAt.getTime() === result.updatedAt.getTime()) {
         upserted++;
-        logger.info(`  📌 Created: ${courtData.court_name} (${courtData.district}, ${courtData.state}) → [${courtData.lat}, ${courtData.lng}]`);
+        logger.info(`  [CREATED] Created: ${courtData.court_name} (${courtData.district}, ${courtData.state}) → [${courtData.lat}, ${courtData.lng}]`);
       } else {
         updated++;
-        logger.info(`  ✏️  Updated: ${courtData.court_name} → [${courtData.lat}, ${courtData.lng}]`);
+        logger.info(`  [UPDATED] Updated: ${courtData.court_name} → [${courtData.lat}, ${courtData.lng}]`);
       }
     }
 
@@ -203,21 +203,21 @@ async function seedCourtGeo() {
     const geoCount = await geoAddAllCourts();
     await disconnectRedis();
 
-    logger.info('═══════════════════════════════════════════════════');
-    logger.info('  📊 Geo Seed Summary:');
+    logger.info('---------------------------------------------------');
+    logger.info('  [SUMMARY] Geo Seed Summary:');
     logger.info(`     New courts:     ${upserted}`);
     logger.info(`     Updated courts: ${updated}`);
     logger.info(`     Total:          ${COURT_GEO_DATA.length}`);
     logger.info(`     Redis geo-indexed: ${geoCount}`);
-    logger.info('═══════════════════════════════════════════════════');
+    logger.info('---------------------------------------------------');
 
   } catch (err) {
-    logger.error({ err }, '❌ Geo seeding failed');
+    logger.error({ err }, '[ERROR] Geo seeding failed');
     process.exit(1);
   }
 
   await closeDB();
-  logger.info('Geo seeding done! ✅');
+  logger.info('Geo seeding done! [SUCCESS]');
   process.exit(0);
 }
 

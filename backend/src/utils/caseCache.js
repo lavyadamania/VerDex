@@ -62,7 +62,7 @@ async function syncCaseToRedis(caseDoc) {
     // Update delay risk sets
     await updateDelayRiskSets(caseId, caseDoc);
 
-    logger.info(`🔄 Redis synced: case:${caseId} → status=${data.status}`);
+    logger.info(`[SYNC] Redis synced: case:${caseId} -> status=${data.status}`);
 
     // ── Publish real-time case update via Pub/Sub ──
     if (caseDoc.victim_user) {
@@ -146,7 +146,7 @@ async function syncCourtStatsToRedis(courtId) {
     const resolutionRate = totalFiled > 0 ? (disposedCount / totalFiled) * 100 : 0;
     await redis.zadd('leaderboard:courts', resolutionRate, courtIdStr);
 
-    logger.info(`🔄 Redis synced: court:${courtIdStr} → pending=${pendingCount}, disposed=${disposedCount}, delay=${avgDelay}`);
+    logger.info(`[SYNC] Redis synced: court:${courtIdStr} -> pending=${pendingCount}, disposed=${disposedCount}, delay=${avgDelay}`);
   } catch (err) {
     logger.error({ err }, `Failed to sync court ${courtId} stats to Redis`);
   }

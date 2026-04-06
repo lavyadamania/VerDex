@@ -106,17 +106,17 @@ async function connectRedis() {
     if (pong === 'PONG') {
       redis = client;
       useMemoryStore = false;
-      logger.info('✅ Redis connected (real Redis server)');
+      logger.info('[SUCCESS] Redis connected (real Redis server)');
       return true;
     }
   } catch (err) {
-    logger.warn(`⚠️  Redis not available (${err.message}) — using in-memory store`);
+    logger.warn(`[WARNING] Redis not available (${err.message}) -- using in-memory store`);
   }
 
   // ── Fallback to memory store ──
   redis = new MemoryRedis();
   useMemoryStore = true;
-  logger.info('✅ In-Memory Redis store active (fallback)');
+  logger.info('[SUCCESS] In-Memory Redis store active (fallback)');
   return true;
 }
 

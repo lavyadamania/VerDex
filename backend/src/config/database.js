@@ -10,10 +10,10 @@ const MONGO_URI = env.MONGO_URI || 'mongodb://localhost:27017/court_transparency
 async function connectDB() {
   try {
     await mongoose.connect(MONGO_URI);
-    logger.info(`✅ MongoDB connected — ${MONGO_URI.replace(/\/\/.*@/, '//***@')}`);
+    logger.info(`[SUCCESS] MongoDB connected -- ${MONGO_URI.replace(/\/\/.*@/, '//***@')}`);
     return true;
   } catch (err) {
-    logger.error({ err }, '❌ MongoDB connection failed');
+    logger.error({ err }, '[ERROR] MongoDB connection failed');
     return false;
   }
 }

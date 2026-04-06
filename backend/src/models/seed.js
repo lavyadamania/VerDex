@@ -12,7 +12,7 @@ const { bulkSyncAllCasesToRedis } = require('../utils/caseCache');
 const logger = require('../utils/logger');
 
 async function seed() {
-  logger.info('🌱 Seeding MongoDB...');
+  logger.info('[SEED] Seeding MongoDB...');
 
   const connected = await connectDB();
   if (!connected) {
@@ -26,7 +26,7 @@ async function seed() {
     await User.deleteMany({});
     await Case.deleteMany({});
     await CaseEvent.deleteMany({});
-    logger.info('🧹 Cleared existing data');
+    logger.info('[CLEAN] Cleared existing data');
 
     // ── Seed Courts ──
     const courts = await Court.insertMany([
@@ -39,7 +39,7 @@ async function seed() {
       { court_name: 'Chennai High Court', court_type: 'high_court', district: 'Chennai', state: 'Tamil Nadu', pin_code: '600104' },
       { court_name: 'Lucknow Bench', court_type: 'high_court', district: 'Lucknow', state: 'Uttar Pradesh', pin_code: '226001' },
     ]);
-    logger.info(`✅ Seeded ${courts.length} courts`);
+    logger.info(`[SUCCESS] Seeded ${courts.length} courts`);
 
     // ── Seed Users ──
     const adminHash = await bcrypt.hash('admin123', 12);
@@ -81,7 +81,7 @@ async function seed() {
       role: 'court_staff',
       verification_status: 'fully_verified',
     });
-    logger.info('✅ Seeded 4 users (admin + victim + visitor + court_staff)');
+    logger.info('[SUCCESS] Seeded 4 users (admin + victim + visitor + court_staff)');
 
     // ── Seed Cases ──
     const cases = await Case.insertMany([
@@ -160,7 +160,7 @@ async function seed() {
         stagnation_flag: true,
       },
     ]);
-    logger.info(`✅ Seeded ${cases.length} cases`);
+    logger.info(`[SUCCESS] Seeded ${cases.length} cases`);
 
     // ── Seed Case Events ──
     const events = await CaseEvent.insertMany([
@@ -175,7 +175,7 @@ async function seed() {
       { case: cases[4]._id, event_type: 'filing', event_date: new Date('2022-08-14'), event_description: 'Murder case registered under IPC 302', is_public: true },
       { case: cases[4]._id, event_type: 'hearing', event_date: new Date('2022-11-20'), event_description: 'Charge sheet filed by prosecution', is_public: true },
     ]);
-    logger.info(`✅ Seeded ${events.length} case events`);
+    logger.info(`[SUCCESS] Seeded ${events.length} case events`);
 
     // ── Update court case counts ──
     for (const court of courts) {
@@ -183,20 +183,20 @@ async function seed() {
       const resolved = await Case.countDocuments({ court: court._id, current_status: 'disposed' });
       await Court.findByIdAndUpdate(court._id, { total_cases_filed: filed, total_cases_resolved: resolved });
     }
-    logger.info('✅ Updated court case counts');
+    logger.info('[SUCCESS] Updated court case counts');
 
     // ── Summary ──
-    logger.info('═══════════════════════════════════════════════════');
-    logger.info('  📊 Seed Summary:');
+    logger.info('---------------------------------------------------');
+    logger.info('  [SUMMARY] Seed Summary:');
     logger.info(`     Courts: ${courts.length}`);
     logger.info(`     Users: 4 (admin + victim + visitor + court_staff)`);
     logger.info(`     Cases: ${cases.length}`);
     logger.info(`     Events: ${events.length}`);
-    logger.info('  📧 Admin:   admin@courtsystem.in / admin123');
-    logger.info('  📧 Victim:  victim@test.com / victim123');
-    logger.info('  👁️  Visitor: visitor@test.com / visitor123');
-    logger.info('  📋 Staff:   staff@courtsystem.in / staff123');
-    logger.info('═══════════════════════════════════════════════════');
+    logger.info('  Email Admin:   admin@courtsystem.in / admin123');
+    logger.info('  Email Victim:  victim@test.com / victim123');
+    logger.info('  Visitor: visitor@test.com / visitor123');
+    logger.info('  Staff:   staff@courtsystem.in / staff123');
+    logger.info('---------------------------------------------------');
 
     // ── Sync all seeded data to Redis ──
     await connectRedis();
@@ -204,12 +204,12 @@ async function seed() {
     await disconnectRedis();
 
   } catch (err) {
-    logger.error({ err }, '❌ Seeding failed');
+    logger.error({ err }, '[ERROR] Seeding failed');
     process.exit(1);
   }
 
   await closeDB();
-  logger.info('Seeding done! ✅');
+  logger.info('Seeding done! [SUCCESS]');
   process.exit(0);
 }
 
