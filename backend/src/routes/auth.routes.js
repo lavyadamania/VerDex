@@ -12,7 +12,6 @@ const env = require('../config/env');
 const { getRedis } = require('../config/redis');
 const { validate } = require('../middleware/validator');
 const { authenticate } = require('../middleware/auth');
-const { authLimiter } = require('../middleware/rateLimiter');
 const { AppError } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
 
@@ -65,7 +64,7 @@ function generateOTP() {
 // ============================================================
 // POST /api/auth/register
 // ============================================================
-router.post('/register', authLimiter, validate(registerSchema), async (req, res, next) => {
+router.post('/register', validate(registerSchema), async (req, res, next) => {
   try {
     const { email, password, full_name, phone, role } = req.body;
 
@@ -123,7 +122,7 @@ router.post('/register', authLimiter, validate(registerSchema), async (req, res,
 // ============================================================
 // POST /api/auth/verify-otp
 // ============================================================
-router.post('/verify-otp', authLimiter, authenticate, validate(otpSchema), async (req, res, next) => {
+router.post('/verify-otp', authenticate, validate(otpSchema), async (req, res, next) => {
   try {
     const { otp } = req.body;
     const userId = req.user._id;
@@ -181,7 +180,7 @@ router.post('/verify-otp', authLimiter, authenticate, validate(otpSchema), async
 // ============================================================
 // POST /api/auth/resend-otp
 // ============================================================
-router.post('/resend-otp', authLimiter, authenticate, async (req, res, next) => {
+router.post('/resend-otp', authenticate, async (req, res, next) => {
   try {
     const userId = req.user._id;
     const user = await User.findById(userId);
@@ -218,7 +217,7 @@ router.post('/resend-otp', authLimiter, authenticate, async (req, res, next) => 
 // ============================================================
 // POST /api/auth/login
 // ============================================================
-router.post('/login', authLimiter, validate(loginSchema), async (req, res, next) => {
+router.post('/login', validate(loginSchema), async (req, res, next) => {
   try {
     const { email, password } = req.body;
 

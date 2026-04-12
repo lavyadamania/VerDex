@@ -15,6 +15,7 @@ const { auditMiddleware, createAuditEntry } = require('../middleware/audit');
 const { AppError } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
 const { syncCaseToRedis, syncCourtStatsToRedis, deleteCaseCache } = require('../utils/caseCache');
+const { emitCaseEvent } = require('../services/eventService');
 
 // Audit all writes
 router.use(auditMiddleware('case'));
@@ -26,7 +27,7 @@ const createCaseSchema = z.object({
   cnr_number: z.string().min(5, 'CNR number is required'),
   case_number: z.string().optional(),
   case_type: z.enum(['sexual_assault', 'domestic_violence', 'dowry', 'kidnapping',
-                      'murder', 'fraud', 'theft', 'cybercrime', 'other']),
+    'murder', 'fraud', 'theft', 'cybercrime', 'other']),
   case_title: z.string().optional(),
   court_id: z.string().min(1, 'Court ID is required'),
   filing_date: z.string().min(1, 'Filing date is required'),
@@ -40,7 +41,7 @@ const createCaseSchema = z.object({
 const updateCaseSchema = z.object({
   case_title: z.string().optional(),
   current_status: z.enum(['filed', 'hearing', 'evidence', 'arguments',
-                           'reserved', 'judgment', 'disposed', 'appealed']).optional(),
+    'reserved', 'judgment', 'disposed', 'appealed']).optional(),
   next_hearing_date: z.string().optional(),
   accused_name: z.string().optional(),
   judge_name: z.string().optional(),
@@ -52,8 +53,8 @@ const updateCaseSchema = z.object({
 
 const addEventSchema = z.object({
   event_type: z.enum(['filing', 'hearing', 'adjournment', 'order',
-                       'evidence_submitted', 'argument', 'judgment',
-                       'notice', 'transfer', 'other']),
+    'evidence_submitted', 'argument', 'judgment',
+    'notice', 'transfer', 'other']),
   event_date: z.string().min(1, 'Event date is required'),
   event_description: z.string().optional(),
   adjournment_reason: z.string().optional(),
@@ -77,8 +78,6 @@ router.get('/', optionalAuth, async (req, res, next) => {
 
     // Role-based filtering
     if (role === 'victim') {
-      filter.victim_user = req.user._id;
-    } else if (role === 'advocate') {
       filter.victim_user = req.user._id;
     }
     // visitor / unauthenticated / admin / court_staff → see all cases
@@ -431,6 +430,26 @@ router.patch('/:id/status', authenticate, authorize('admin', 'court_staff'), asy
     await syncCaseToRedis(caseDoc);
     await syncCourtStatsToRedis(caseDoc.court);
 
+    // ── Emit Real-Time Event ──
+    try {
+      await emitCaseEvent({
+        caseId: caseDoc._id,
+        type: 'STATUS_UPDATE',
+        message: `Case ${caseDoc.cnr_number} status changed from ${oldStatus} to ${status}`,
+        createdBy: req.user._id,
+        metadata: {
+          caseNumber: caseDoc.cnr_number,
+          caseTitle: caseDoc.case_title,
+          oldValue: oldStatus,
+          newValue: status,
+        },
+        rolesVisibleTo: ['admin', 'court_staff', 'advocate', 'victim'],
+        usersVisibleTo: caseDoc.victim_user ? [caseDoc.victim_user] : [],
+      });
+    } catch (eventErr) {
+      logger.warn(`Failed to emit status update event: ${eventErr.message}`);
+    }
+
     logger.info(`🔄 Case ${caseDoc.cnr_number}: ${oldStatus} → ${status} by ${req.user.email}`);
 
     res.json({
@@ -639,6 +658,38 @@ router.post('/:id/events', authenticate, denyVisitor, validate(addEventSchema), 
 
     // ── Redis Cache Sync ──
     await syncCaseToRedis(caseDoc);
+
+    // ── Emit Real-Time Event ──
+    const eventTypeMap = {
+      'adjournment': 'ADJOURNMENT',
+      'hearing': 'HEARING_STARTED',
+      'judgment': 'JUDGMENT',
+      'document_uploaded': 'DOCUMENT_UPLOADED',
+      'order': 'STATUS_UPDATE',
+      'other': 'OTHER',
+    };
+
+    const mappedEventType = eventTypeMap[event_type] || 'OTHER';
+
+    try {
+      await emitCaseEvent({
+        caseId: caseDoc._id,
+        type: mappedEventType,
+        message: event_description || `${event_type} event added to case ${caseDoc.cnr_number}`,
+        createdBy: req.user._id,
+        metadata: {
+          caseNumber: caseDoc.cnr_number,
+          caseTitle: caseDoc.case_title,
+          eventType: event_type,
+          adjournmentReason: adjournment_reason,
+          orderSummary: order_summary,
+        },
+        rolesVisibleTo: is_public ? ['admin', 'court_staff', 'advocate', 'victim', 'visitor'] : ['admin', 'court_staff', 'advocate', 'victim'],
+        usersVisibleTo: caseDoc.victim_user ? [caseDoc.victim_user] : [],
+      });
+    } catch (eventErr) {
+      logger.warn(`Failed to emit case event: ${eventErr.message}`);
+    }
 
     logger.info(`📌 Event added to ${caseDoc.cnr_number}: ${event_type} by ${req.user.email}`);
 

@@ -23,6 +23,8 @@ function LoginPage() {
                 return
             }
             if (['admin', 'court_staff'].includes(user?.role)) navigate('/dashboard/admin')
+            else if (user?.role === 'advocate') navigate('/dashboard/advocate')
+            else if (user?.role === 'visitor') navigate('/dashboard/public')
             else navigate('/dashboard/victim')
         } catch (err) {
             setError(err?.response?.data?.error || 'Login failed. Please check your credentials.')

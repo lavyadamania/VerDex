@@ -20,6 +20,7 @@ const { uploadLimiter } = require('../middleware/rateLimiter');
 const { AppError } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
 const { getFileReference, resolveFilePath, deleteFile, UPLOAD_BASE } = require('../utils/storageService');
+const { emitCaseEvent } = require('../services/eventService');
 
 // Audit writes
 router.use(auditMiddleware('document'));
@@ -103,6 +104,25 @@ router.post('/:caseId/upload', authenticate, denyVisitor, uploadLimiter, upload.
     });
 
     logger.info(`📄 Document uploaded: ${req.file.originalname} → case ${caseDoc.cnr_number} by ${req.user.email} [${fileRef.provider}]`);
+
+    // ── Emit Real-Time Event ──
+    try {
+      await emitCaseEvent({
+        caseId: caseDoc._id,
+        type: 'DOCUMENT_UPLOADED',
+        message: `Document "${req.file.originalname}" uploaded to case ${caseDoc.cnr_number}`,
+        createdBy: req.user._id,
+        metadata: {
+          caseNumber: caseDoc.cnr_number,
+          docType: doc_type,
+          fileName: req.file.originalname,
+        },
+        rolesVisibleTo: ['admin', 'court_staff', 'advocate', 'victim'],
+        usersVisibleTo: caseDoc.victim_user ? [caseDoc.victim_user] : [],
+      });
+    } catch (eventErr) {
+      logger.warn(`Failed to emit document upload event: ${eventErr.message}`);
+    }
 
     // ── Auto-trigger AI processing ──
     let aiJob = null;

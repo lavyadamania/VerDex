@@ -53,8 +53,7 @@ function rateLimiter({
 }
 
 // Pre-configured limiters
-const authLimiter = rateLimiter({ windowMs: 15 * 60 * 1000, max: 10, message: 'Too many auth attempts. Try again in 15 minutes.' });
 const apiLimiter = rateLimiter({ windowMs: 60 * 1000, max: 100 });
 const uploadLimiter = rateLimiter({ windowMs: 60 * 1000, max: 10, message: 'Too many uploads. Try again in a minute.' });
 
-module.exports = { rateLimiter, authLimiter, apiLimiter, uploadLimiter };
+module.exports = { rateLimiter, apiLimiter, uploadLimiter };

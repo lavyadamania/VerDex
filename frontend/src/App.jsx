@@ -5,6 +5,7 @@ import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import VictimDashboardPage from './pages/VictimDashboardPage'
+import AdvocateDashboardPage from './pages/AdvocateDashboardPage'
 import PublicDashboardPage from './pages/PublicDashboardPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import UnauthorizedPage from './pages/UnauthorizedPage'
@@ -19,9 +20,20 @@ function App() {
             <Route
                 path="/dashboard/victim"
                 element={
-                    <ProtectedRoute allowedRoles={["victim", "advocate"]}>
+                    <ProtectedRoute allowedRoles={["victim"]}>
                         <AppShell title="Victim Dashboard">
                             <VictimDashboardPage />
+                        </AppShell>
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/dashboard/advocate"
+                element={
+                    <ProtectedRoute allowedRoles={["advocate"]}>
+                        <AppShell title="Advocate Dashboard">
+                            <AdvocateDashboardPage />
                         </AppShell>
                     </ProtectedRoute>
                 }

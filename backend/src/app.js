@@ -217,6 +217,7 @@ app.use('/api/admin', require('./routes/admin.routes'));
 app.use('/api/errors', require('./routes/errorDetection.routes'));
 app.use('/api/sse', require('./routes/sse.routes'));
 app.use('/api/ai', require('./routes/ai.routes'));
+app.use('/api/events', require('./routes/events.routes'));
 
 // ── 404 handler ──
 app.use(notFoundHandler);
@@ -263,6 +264,19 @@ async function startServer() {
     logger.info(`  [ENV] Env:    ${env.NODE_ENV}`);
     logger.info(`  [DB] DB:     MongoDB`);
     logger.info('---------------------------------------------------');
+
+    // ── Initialize Socket.io for Real-Time Events ──
+    const { initializeSocketServer } = require('./sockets/socketServer');
+    const { initializeRedisSubscriber, startListening } = require('./services/redisSubscriber');
+    
+    try {
+      const io = initializeSocketServer(server);
+      initializeRedisSubscriber(io);
+      startListening(io);
+      logger.info('✅ Real-Time Live Monitoring System activated');
+    } catch (socketErr) {
+      logger.error(`⚠️  Socket.io initialization failed: ${socketErr.message}`);
+    }
 
     // ── Start Background Workers ──
     startDelayDetectionScheduler().catch(err => {

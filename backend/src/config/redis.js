@@ -11,6 +11,7 @@ const env = require('./env');
 const logger = require('../utils/logger');
 
 let redis = null;
+let redisSubscriber = null;  // ← Separate connection for pub/sub
 let useMemoryStore = false;
 
 // ── In-Memory Redis-like Store (fallback) ──
@@ -105,6 +106,33 @@ async function connectRedis() {
 
     if (pong === 'PONG') {
       redis = client;
+      
+      // Create a SEPARATE subscriber connection
+      try {
+        let subscriberClient;
+        if (env.REDIS_URL) {
+          subscriberClient = new Redis(env.REDIS_URL, {
+            maxRetriesPerRequest: null,
+            connectTimeout: 5000,
+            tls: env.REDIS_URL.startsWith('rediss://') ? {} : undefined,
+          });
+        } else {
+          subscriberClient = new Redis({
+            host: env.REDIS_HOST,
+            port: env.REDIS_PORT,
+            password: env.REDIS_PASSWORD || undefined,
+            maxRetriesPerRequest: null,
+            connectTimeout: 3000,
+          });
+        }
+        
+        redisSubscriber = subscriberClient;
+        logger.info('[SUCCESS] Redis subscriber connection created (separate for pub/sub)');
+      } catch (subErr) {
+        logger.warn(`[WARNING] Failed to create subscriber connection: ${subErr.message}`);
+        redisSubscriber = redis;  // Fallback to main connection if needed
+      }
+      
       useMemoryStore = false;
       logger.info('[SUCCESS] Redis connected (real Redis server)');
       return true;
@@ -115,13 +143,18 @@ async function connectRedis() {
 
   // ── Fallback to memory store ──
   redis = new MemoryRedis();
+  redisSubscriber = redis;  // MemoryRedis handles both modes
   useMemoryStore = true;
   logger.info('[SUCCESS] In-Memory Redis store active (fallback)');
   return true;
 }
 
 function getRedis() { return redis; }
+function getRedisSubscriber() { return redisSubscriber; }
 function isMemoryStore() { return useMemoryStore; }
-async function disconnectRedis() { if (redis) { await redis.quit(); logger.info('Redis connection closed'); } }
+async function disconnectRedis() { 
+  if (redis) { await redis.quit(); logger.info('Redis connection closed'); }
+  if (redisSubscriber) { await redisSubscriber.quit(); logger.info('Redis subscriber connection closed'); }
+}
 
-module.exports = { getRedis, connectRedis, disconnectRedis, isMemoryStore };
+module.exports = { getRedis, getRedisSubscriber, connectRedis, disconnectRedis, isMemoryStore };

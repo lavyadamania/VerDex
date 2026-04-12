@@ -6,7 +6,7 @@ import Table from '../components/ui/Table'
 import EmptyState from '../components/ui/EmptyState'
 import StatusBarChart from '../components/charts/StatusBarChart'
 import DelayDistributionChart from '../components/charts/DelayDistributionChart'
-import caseService from '../services/caseService'
+import publicService from '../services/publicService'
 import { formatNumber, toSentence } from '../utils/formatters'
 import { riskLevelFromScore } from '../utils/risk'
 
@@ -23,8 +23,8 @@ function PublicDashboardPage() {
             try {
                 setLoading(true)
                 const [casesRes, statsRes] = await Promise.all([
-                    caseService.listCases({ page: 1, limit: 50 }),
-                    caseService.getCaseStats(),
+                    publicService.listCases({ page: 1, limit: 50 }),
+                    publicService.getStats(),
                 ])
 
                 if (!mounted) return
@@ -85,13 +85,13 @@ function PublicDashboardPage() {
         <div className="space-y-6">
             <div className="grid gap-4 md:grid-cols-3">
                 <Card title="Total Cases">
-                    <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{formatNumber(stats?.total_cases)}</p>
+                    <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{formatNumber(stats?.overview?.total_cases)}</p>
                 </Card>
                 <Card title="High Risk Cases">
-                    <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{formatNumber(stats?.high_risk_cases)}</p>
+                    <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{formatNumber((delayDistData.find((x) => x.name === 'High')?.value || 0) + (delayDistData.find((x) => x.name === 'Critical')?.value || 0))}</p>
                 </Card>
                 <Card title="Stagnant Cases">
-                    <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{formatNumber(stats?.stagnant_cases)}</p>
+                    <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{formatNumber(stats?.delay_metrics?.stagnant_cases)}</p>
                 </Card>
             </div>
 

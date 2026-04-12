@@ -56,6 +56,22 @@ function LandingPage() {
                         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Court-level metrics and trend dashboards support governance and policy review.</p>
                     </article>
                 </section>
+
+                <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-panel dark:border-slate-800 dark:bg-slate-900 lg:p-8">
+                    <h3 className="text-lg font-semibold">Choose Your Portal</h3>
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Access dedicated experiences tailored for victims, advocates, and public observers.</p>
+                    <div className="mt-5 grid gap-3 md:grid-cols-3">
+                        <Link to="/dashboard/victim" className="rounded-lg border border-slate-300 px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
+                            Victim Portal
+                        </Link>
+                        <Link to="/dashboard/advocate" className="rounded-lg border border-slate-300 px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
+                            Advocate Portal
+                        </Link>
+                        <Link to="/dashboard/public" className="rounded-lg border border-slate-300 px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
+                            Public Portal
+                        </Link>
+                    </div>
+                </section>
             </main>
         </div>
     )
