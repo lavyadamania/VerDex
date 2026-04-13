@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Activity, AlertCircle, Clock, FileText, Zap, CheckCircle } from 'lucide-react'
 import useLiveEvents from '../../hooks/useLiveEvents'
 import eventService from '../../services/eventService'
+import sseService from '../../services/sseService'
 import Loader from '../ui/Loader'
 import EmptyState from '../ui/EmptyState'
 
@@ -19,6 +20,7 @@ function LiveMonitoringCard() {
   const { events, setEvents, connecting, connected, error: socketError } = useLiveEvents()
   const [loading, setLoading] = useState(true)
   const [apiError, setApiError] = useState(null)
+  const [sseConnected, setSseConnected] = useState(false)
 
   // Load initial events on mount
   useEffect(() => {
@@ -42,6 +44,36 @@ function LiveMonitoringCard() {
 
     loadInitialEvents()
   }, [])
+
+  useEffect(() => {
+    const token = localStorage.getItem('ct_token')
+    if (!token) return undefined
+
+    const source = sseService.connect(
+      token,
+      (payload) => {
+        // Accept known event payload shapes while keeping fallback compatibility.
+        const eventData = payload?.data || payload
+        if (eventData && (eventData.type || eventData.message)) {
+          const normalized = {
+            _id: `${Date.now()}-${Math.random()}`,
+            type: eventData.type || payload?.type || 'STATUS_UPDATE',
+            message: eventData.message || payload?.message || JSON.stringify(eventData),
+            createdAt: eventData.timestamp || payload?.timestamp || new Date().toISOString(),
+          }
+          setEvents((prev) => [normalized, ...prev.slice(0, 99)])
+          setSseConnected(true)
+        }
+      },
+      () => {
+        setSseConnected(false)
+      },
+    )
+
+    return () => {
+      if (source) source.close()
+    }
+  }, [setEvents])
 
   const getEventIcon = (eventType) => {
     switch (eventType) {
@@ -134,13 +166,13 @@ function LiveMonitoringCard() {
           <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Live Monitoring</p>
         </div>
         <div className="flex items-center gap-2">
-          {connected && (
+          {(connected || sseConnected) && (
             <>
               <div className="inline-block h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
               <span className="text-xs font-medium text-green-600 dark:text-green-400">LIVE</span>
             </>
           )}
-          {!connected && !connecting && (
+          {!connected && !sseConnected && !connecting && (
             <>
               <div className="h-2 w-2 rounded-full bg-slate-400"></div>
               <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Offline</span>

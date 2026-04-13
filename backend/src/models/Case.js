@@ -28,6 +28,11 @@ const caseSchema = new mongoose.Schema({
     ref: 'User',
     default: null,
   },
+  victim_id: {
+    type: String,
+    trim: true,
+    default: null,
+  },
   filing_date: {
     type: Date,
     required: true,
@@ -58,6 +63,16 @@ const caseSchema = new mongoose.Schema({
   },
 
   // ── Sensitive Data (NEVER in public view) ──
+  accused_id: {
+    type: String,
+    trim: true,
+    default: null,
+  },
+  judge_id: {
+    type: String,
+    trim: true,
+    default: null,
+  },
   accused_name: String,
   judge_name: String,
   victim_statement: String,
@@ -86,6 +101,13 @@ caseSchema.virtual('days_pending').get(function () {
   return Math.floor((now - filed) / (1000 * 60 * 60 * 24));
 });
 
+// Virtual: business-friendly status label
+caseSchema.virtual('status_label').get(function () {
+  if (this.current_status === 'appealed') return 'Appeal';
+  if (['judgment', 'disposed'].includes(this.current_status)) return 'Closed';
+  return 'Ongoing';
+});
+
 // Virtual: masked ID for public dashboard
 caseSchema.virtual('masked_id').get(function () {
   const idStr = this._id.toString();
@@ -99,6 +121,7 @@ caseSchema.methods.toAnonymized = function () {
     case_type: this.case_type,
     filing_date: this.filing_date,
     current_status: this.current_status,
+    status_label: this.status_label,
     days_pending: this.days_pending,
     adjournment_count: this.adjournment_count,
     next_hearing_date: this.next_hearing_date,
@@ -128,6 +151,9 @@ caseSchema.methods.toAnonymized = function () {
 caseSchema.index({ court: 1 });
 caseSchema.index({ current_status: 1 });
 caseSchema.index({ victim_user: 1 });
+caseSchema.index({ victim_id: 1 });
+caseSchema.index({ accused_id: 1 });
+caseSchema.index({ judge_id: 1 });
 caseSchema.index({ next_hearing_date: 1 });
 caseSchema.index({ last_update: 1 });
 caseSchema.index({ delay_risk_score: -1 });

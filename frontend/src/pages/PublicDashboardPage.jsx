@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import Card from '../components/ui/Card'
 import Badge from '../components/ui/Badge'
 import Loader from '../components/ui/Loader'
@@ -7,12 +8,17 @@ import EmptyState from '../components/ui/EmptyState'
 import StatusBarChart from '../components/charts/StatusBarChart'
 import DelayDistributionChart from '../components/charts/DelayDistributionChart'
 import publicService from '../services/publicService'
+import mapService from '../services/mapService'
+import { Clock3, Trophy } from 'lucide-react'
 import { formatNumber, toSentence } from '../utils/formatters'
 import { riskLevelFromScore } from '../utils/risk'
 
 function PublicDashboardPage() {
     const [cases, setCases] = useState([])
     const [stats, setStats] = useState(null)
+    const [leaderboard, setLeaderboard] = useState([])
+    const [mapStats, setMapStats] = useState(null)
+    const [lastUpdated, setLastUpdated] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
 
@@ -22,14 +28,19 @@ function PublicDashboardPage() {
         async function loadData() {
             try {
                 setLoading(true)
-                const [casesRes, statsRes] = await Promise.all([
+                const [casesRes, statsRes, courtsRes, mapStatsRes] = await Promise.all([
                     publicService.listCases({ page: 1, limit: 50 }),
                     publicService.getStats(),
+                    publicService.getLeaderboard(),
+                    mapService.getStats(),
                 ])
 
                 if (!mounted) return
                 setCases(casesRes?.cases || [])
                 setStats(statsRes)
+                setLeaderboard(courtsRes?.leaderboard || [])
+                setMapStats(mapStatsRes || null)
+                setLastUpdated(new Date())
             } catch (err) {
                 if (mounted) setError(err?.response?.data?.error || 'Unable to load transparency dashboard.')
             } finally {
@@ -38,8 +49,10 @@ function PublicDashboardPage() {
         }
 
         loadData()
+        const timer = setInterval(loadData, 30000)
         return () => {
             mounted = false
+            clearInterval(timer)
         }
     }, [])
 
@@ -61,8 +74,28 @@ function PublicDashboardPage() {
         ]
     }, [cases])
 
+    const leaderboardRows = useMemo(() => {
+        return leaderboard.map((court, index) => ({
+            rank: index + 1,
+            court_name: court.court_name,
+            district: court.district,
+            court_type: toSentence(court.court_type),
+            total_cases_filed: court.total_cases_filed,
+            total_cases_resolved: court.cases_resolved,
+            total_pending: court.cases_pending,
+            resolution_rate: court.resolution_rate,
+            lifecycle_completion_score: court.lifecycle_completion_score,
+            justice_speed_index: court.justice_speed_index,
+            court_id: court.court_id,
+        }))
+    }, [leaderboard])
+
     const columns = [
-        { key: 'masked_id', label: 'Case ID' },
+        {
+            key: 'masked_id',
+            label: 'Case ID',
+            render: (value) => <Link to={`/dashboard/public/case/${value}`} className="font-semibold text-brand-700 hover:underline dark:text-brand-100">{value}</Link>,
+        },
         { key: 'court_name', label: 'Court' },
         { key: 'days_pending', label: 'Days Pending' },
         { key: 'adjournment_count', label: 'Adjournments' },
@@ -70,6 +103,39 @@ function PublicDashboardPage() {
             key: 'delay_risk_score',
             label: 'Delay Risk',
             render: (value) => <Badge tone={riskLevelFromScore(value)}>{riskLevelFromScore(value)} ({value || 0})</Badge>,
+        },
+    ]
+
+    const leaderboardColumns = [
+        { key: 'rank', label: '#' },
+        {
+            key: 'court_name',
+            label: 'Court Name',
+            render: (value, row) => (
+                row.court_id
+                    ? <Link to={`/dashboard/public/court/${row.court_id}`} className="font-semibold text-brand-700 hover:underline dark:text-brand-100">{value}</Link>
+                    : value
+            ),
+        },
+        { key: 'district', label: 'City' },
+        { key: 'court_type', label: 'Level' },
+        { key: 'total_cases_filed', label: 'Filed' },
+        { key: 'total_cases_resolved', label: 'Resolved' },
+        { key: 'total_pending', label: 'Pending' },
+        {
+            key: 'lifecycle_completion_score',
+            label: 'Lifecycle Score',
+            render: (value) => <Badge tone="warning">{Number(value || 0).toFixed(1)}</Badge>,
+        },
+        {
+            key: 'resolution_rate',
+            label: 'Resolution Rate',
+            render: (value) => <Badge tone="info">{Number(value || 0).toFixed(1)}%</Badge>,
+        },
+        {
+            key: 'justice_speed_index',
+            label: 'Overall Score',
+            render: (value) => <Badge tone="success">{Number(value || 0).toFixed(1)}/100</Badge>,
         },
     ]
 
@@ -95,6 +161,18 @@ function PublicDashboardPage() {
                 </Card>
             </div>
 
+            <div className="grid gap-4 md:grid-cols-3">
+                <Card title="Map Courts Covered">
+                    <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{formatNumber(mapStats?.total_courts)}</p>
+                </Card>
+                <Card title="Map High and Critical">
+                    <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{formatNumber((mapStats?.risk_breakdown?.HIGH || 0) + (mapStats?.risk_breakdown?.CRITICAL || 0))}</p>
+                </Card>
+                <Card title="Map Avg JSI">
+                    <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{Number(mapStats?.avg_jsi || 0).toFixed(1)}</p>
+                </Card>
+            </div>
+
             <div className="grid gap-6 xl:grid-cols-2">
                 <Card title="Cases by Status" subtitle="Current case lifecycle distribution">
                     <StatusBarChart data={statusChartData} />
@@ -103,6 +181,25 @@ function PublicDashboardPage() {
                     <DelayDistributionChart data={delayDistData} />
                 </Card>
             </div>
+
+            <Card
+                title="Live Court Leaderboard"
+                subtitle="Ranked by end-to-end lifecycle and overall court score"
+                action={
+                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                        <Trophy className="h-4 w-4 text-amber-500" />
+                        <Clock3 className="h-4 w-4" />
+                        <span>{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Live'}</span>
+                    </div>
+                }
+            >
+                <Table
+                    columns={leaderboardColumns}
+                    rows={leaderboardRows}
+                    emptyTitle="No court ranking available"
+                    emptyMessage="Court leaderboard data will appear once public court metrics are available."
+                />
+            </Card>
 
             <Card title="Anonymized Case Registry" subtitle="Public transparency view with masked identifiers">
                 <Table

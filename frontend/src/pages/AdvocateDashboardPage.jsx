@@ -6,6 +6,10 @@ import Loader from '../components/ui/Loader'
 import EmptyState from '../components/ui/EmptyState'
 import Timeline from '../components/ui/Timeline'
 import caseService from '../services/caseService'
+import documentService from '../services/documentService'
+import aiService from '../services/aiService'
+import verificationService from '../services/verificationService'
+import disclosureService from '../services/disclosureService'
 import { formatDate, formatNumber, toSentence } from '../utils/formatters'
 import { riskLevelFromScore } from '../utils/risk'
 
@@ -14,6 +18,13 @@ function AdvocateDashboardPage() {
     const [selectedCase, setSelectedCase] = useState(null)
     const [timeline, setTimeline] = useState([])
     const [documents, setDocuments] = useState([])
+    const [verificationStatus, setVerificationStatus] = useState(null)
+    const [advocatePayload, setAdvocatePayload] = useState({ advocate_name: '', bar_council_id: '', advocate_phone: '', advocate_email: '' })
+    const [disclosureFields, setDisclosureFields] = useState([])
+    const [selectedDisclosureFields, setSelectedDisclosureFields] = useState([])
+    const [disclosureJustification, setDisclosureJustification] = useState('')
+    const [flowMessage, setFlowMessage] = useState('')
+    const [aiRunningDocId, setAiRunningDocId] = useState('')
     const [loading, setLoading] = useState(true)
     const [detailLoading, setDetailLoading] = useState(false)
     const [error, setError] = useState('')
@@ -72,6 +83,96 @@ function AdvocateDashboardPage() {
             mounted = false
         }
     }, [selectedCase?._id])
+
+    useEffect(() => {
+        let mounted = true
+
+        async function loadVerificationAndDisclosure() {
+            try {
+                const [statusRes, fieldsRes] = await Promise.all([
+                    verificationService.getStatus(),
+                    disclosureService.listFields(),
+                ])
+                if (!mounted) return
+                setVerificationStatus(statusRes)
+                setDisclosureFields(fieldsRes?.disclosable_fields || [])
+            } catch {
+                if (mounted) {
+                    setVerificationStatus(null)
+                    setDisclosureFields([])
+                }
+            }
+        }
+
+        loadVerificationAndDisclosure()
+        return () => {
+            mounted = false
+        }
+    }, [])
+
+    async function handleDownloadDocument(doc) {
+        try {
+            const { blob } = await documentService.download(doc._id)
+            const url = window.URL.createObjectURL(blob)
+            const a = window.document.createElement('a')
+            a.href = url
+            a.download = doc.file_name || 'document'
+            a.click()
+            window.URL.revokeObjectURL(url)
+        } catch {
+            setFlowMessage('Unable to download document.')
+        }
+    }
+
+    async function handleAiAction(docId, action) {
+        try {
+            setAiRunningDocId(docId)
+            if (action === 'analyze') await aiService.analyzeDocument(docId)
+            if (action === 'extract') await aiService.extractText(docId)
+            if (action === 'summarize') await aiService.summarize(docId)
+            if (action === 'classify') await aiService.classify(docId)
+            setFlowMessage(`AI ${action} completed.`)
+        } catch (err) {
+            setFlowMessage(err?.response?.data?.error || `AI ${action} failed.`)
+        } finally {
+            setAiRunningDocId('')
+        }
+    }
+
+    async function handleSubmitAdvocate(event) {
+        event.preventDefault()
+        try {
+            await verificationService.submitAdvocate(advocatePayload)
+            const statusRes = await verificationService.getStatus()
+            setVerificationStatus(statusRes)
+            setFlowMessage('Advocate verification details submitted successfully.')
+        } catch (err) {
+            setFlowMessage(err?.response?.data?.error || 'Failed to submit advocate details.')
+        }
+    }
+
+    async function handleDisclosureRequest(event) {
+        event.preventDefault()
+        if (!selectedCase?._id || !selectedDisclosureFields.length) return
+        try {
+            await disclosureService.submitRequest({
+                case_id: selectedCase._id,
+                requested_fields: selectedDisclosureFields,
+                justification: disclosureJustification,
+            })
+            setSelectedDisclosureFields([])
+            setDisclosureJustification('')
+            setFlowMessage('Disclosure request submitted.')
+        } catch (err) {
+            setFlowMessage(err?.response?.data?.error || 'Unable to submit disclosure request for selected case.')
+        }
+    }
+
+    function toggleDisclosureField(field) {
+        setSelectedDisclosureFields((current) => (
+            current.includes(field) ? current.filter((f) => f !== field) : [...current, field]
+        ))
+    }
 
     const overview = useMemo(() => {
         const active = cases.filter((c) => !['judgment', 'disposed'].includes(c.current_status)).length
@@ -190,13 +291,62 @@ function AdvocateDashboardPage() {
                                                     <p className="text-xs text-slate-500 dark:text-slate-400">{toSentence(doc.doc_type)}</p>
                                                 </div>
                                             </div>
-                                            <Badge tone="info">{doc.verified_status}</Badge>
+                                            <div className="flex items-center gap-2">
+                                                <Badge tone="info">{doc.verified_status}</Badge>
+                                                <button type="button" onClick={() => handleDownloadDocument(doc)} className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold dark:border-slate-700">
+                                                    Download
+                                                </button>
+                                                <button type="button" disabled={aiRunningDocId === doc._id} onClick={() => handleAiAction(doc._id, 'analyze')} className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold disabled:opacity-50 dark:border-slate-700">
+                                                    Analyze
+                                                </button>
+                                                <button type="button" disabled={aiRunningDocId === doc._id} onClick={() => handleAiAction(doc._id, 'extract')} className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold disabled:opacity-50 dark:border-slate-700">
+                                                    Extract
+                                                </button>
+                                                <button type="button" disabled={aiRunningDocId === doc._id} onClick={() => handleAiAction(doc._id, 'summarize')} className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold disabled:opacity-50 dark:border-slate-700">
+                                                    Summarize
+                                                </button>
+                                                <button type="button" disabled={aiRunningDocId === doc._id} onClick={() => handleAiAction(doc._id, 'classify')} className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold disabled:opacity-50 dark:border-slate-700">
+                                                    Classify
+                                                </button>
+                                            </div>
                                         </li>
                                     ))}
                                 </ul>
                             )}
                         </Card>
                     </div>
+
+                    <div className="grid gap-6 xl:grid-cols-2">
+                        <Card title="Verification Flow" subtitle="Layer 3 advocate confirmation">
+                            <p className="mb-3 text-sm text-slate-600 dark:text-slate-300">Current verification status: <span className="font-semibold">{verificationStatus?.current_status || 'unknown'}</span></p>
+                            <form onSubmit={handleSubmitAdvocate} className="grid gap-2 md:grid-cols-2">
+                                <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Advocate Name" value={advocatePayload.advocate_name} onChange={(e) => setAdvocatePayload((p) => ({ ...p, advocate_name: e.target.value }))} required />
+                                <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Bar Council ID" value={advocatePayload.bar_council_id} onChange={(e) => setAdvocatePayload((p) => ({ ...p, bar_council_id: e.target.value }))} />
+                                <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Phone" value={advocatePayload.advocate_phone} onChange={(e) => setAdvocatePayload((p) => ({ ...p, advocate_phone: e.target.value }))} />
+                                <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Email" value={advocatePayload.advocate_email} onChange={(e) => setAdvocatePayload((p) => ({ ...p, advocate_email: e.target.value }))} />
+                                <button type="submit" className="md:col-span-2 rounded-lg bg-brand-700 px-3 py-2 text-sm font-semibold text-white">Submit Advocate Details</button>
+                            </form>
+                        </Card>
+
+                        <Card title="Disclosure Flow" subtitle="Request selective disclosure for selected case">
+                            <form onSubmit={handleDisclosureRequest} className="space-y-3">
+                                <div className="grid gap-2 md:grid-cols-2">
+                                    {disclosureFields.map((field) => (
+                                        <label key={field} className="flex items-center gap-2 text-sm">
+                                            <input type="checkbox" checked={selectedDisclosureFields.includes(field)} onChange={() => toggleDisclosureField(field)} />
+                                            {field}
+                                        </label>
+                                    ))}
+                                </div>
+                                <textarea className="min-h-20 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Justification" value={disclosureJustification} onChange={(e) => setDisclosureJustification(e.target.value)} />
+                                <button type="submit" disabled={!selectedCase?._id || !selectedDisclosureFields.length} className="rounded-lg bg-brand-700 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">Submit Disclosure Request</button>
+                            </form>
+                        </Card>
+                    </div>
+
+                    {flowMessage ? (
+                        <p className="text-sm text-slate-600 dark:text-slate-300">{flowMessage}</p>
+                    ) : null}
                 </>
             )}
         </div>

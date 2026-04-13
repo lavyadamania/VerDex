@@ -236,8 +236,8 @@ async function startServer() {
   // Connect to MongoDB
   const dbConnected = await connectDB();
   if (!dbConnected) {
-    logger.error('Failed to connect to MongoDB. Exiting.');
-    process.exit(1);
+    logger.error('Failed to connect to MongoDB initially. Starting in limited mode...');
+    // process.exit(1); // ← REMOVED: Don't crash, let the server start
   }
 
   // Connect to Redis (or fallback to in-memory)

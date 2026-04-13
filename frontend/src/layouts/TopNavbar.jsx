@@ -2,15 +2,39 @@ import { LogOut, Menu, Moon, Sun } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import useAuth from '../hooks/useAuth'
 import useTheme from '../hooks/useTheme'
+import { useState } from 'react'
 
 function TopNavbar({ title, onMenuClick }) {
-    const { user, isAuthenticated, logout } = useAuth()
+    const { user, isAuthenticated, verifyOtp, resendOtp, logout } = useAuth()
     const { theme, toggleTheme } = useTheme()
     const navigate = useNavigate()
+    const [otp, setOtp] = useState('')
+    const [otpMsg, setOtpMsg] = useState('')
 
-    function handleLogout() {
-        logout()
+    async function handleLogout() {
+        await logout()
         navigate('/login')
+    }
+
+    async function handleVerifyOtp() {
+        try {
+            setOtpMsg('')
+            await verifyOtp(otp)
+            setOtp('')
+            setOtpMsg('OTP verified.')
+        } catch (err) {
+            setOtpMsg(err?.response?.data?.error || 'OTP verification failed.')
+        }
+    }
+
+    async function handleResendOtp() {
+        try {
+            setOtpMsg('')
+            const data = await resendOtp()
+            setOtpMsg(data?.otp_hint || 'OTP resent successfully.')
+        } catch (err) {
+            setOtpMsg(err?.response?.data?.error || 'Unable to resend OTP.')
+        }
     }
 
     return (
@@ -53,6 +77,22 @@ function TopNavbar({ title, onMenuClick }) {
                             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{user?.full_name || user?.email}</p>
                             <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{user?.role}</p>
                         </div>
+                        {user?.verification_status === 'unverified' && (
+                            <div className="hidden items-center gap-2 md:flex">
+                                <input
+                                    value={otp}
+                                    onChange={(e) => setOtp(e.target.value)}
+                                    placeholder="OTP"
+                                    className="w-24 rounded-md border border-slate-300 px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-900"
+                                />
+                                <button type="button" onClick={handleVerifyOtp} className="rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold dark:border-slate-700">
+                                    Verify
+                                </button>
+                                <button type="button" onClick={handleResendOtp} className="rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold dark:border-slate-700">
+                                    Resend
+                                </button>
+                            </div>
+                        )}
                         <button
                             type="button"
                             className="rounded-md border border-slate-300 p-2 text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
@@ -63,6 +103,7 @@ function TopNavbar({ title, onMenuClick }) {
                     </>
                 )}
             </div>
+            {otpMsg ? <p className="absolute bottom-1 right-4 text-xs text-slate-500 dark:text-slate-400">{otpMsg}</p> : null}
         </header>
     )
 }

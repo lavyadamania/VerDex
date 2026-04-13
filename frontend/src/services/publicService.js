@@ -6,6 +6,26 @@ const publicService = {
         return res.data?.data
     },
 
+    async getCaseByMaskedId(maskedId) {
+        const res = await api.get(`/public/cases/${maskedId}`)
+        return res.data?.data
+    },
+
+    async getCourts(params = {}) {
+        const res = await api.get('/public/courts', { params })
+        return res.data?.data
+    },
+
+    async getCourtById(id) {
+        const res = await api.get(`/public/courts/${id}`)
+        return res.data?.data
+    },
+
+    async getLeaderboard(params = {}) {
+        const res = await api.get('/leaderboard', { params })
+        return res.data?.data
+    },
+
     async getStats() {
         const res = await api.get('/public/stats')
         return res.data?.data

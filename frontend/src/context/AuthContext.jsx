@@ -59,7 +59,25 @@ export function AuthProvider({ children }) {
         return authService.register(payload)
     }
 
-    function logout() {
+    async function verifyOtp(otp) {
+        const data = await authService.verifyOtp(otp)
+        const current = user || {}
+        const updated = { ...current, verification_status: data?.verification_status || 'otp_verified' }
+        localStorage.setItem('ct_user', JSON.stringify(updated))
+        setUser(updated)
+        return data
+    }
+
+    async function resendOtp() {
+        return authService.resendOtp()
+    }
+
+    async function logout() {
+        try {
+            await authService.logout()
+        } catch {
+            // Clear local session even if backend logout fails.
+        }
         localStorage.removeItem('ct_token')
         localStorage.removeItem('ct_refresh_token')
         localStorage.removeItem('ct_user')
@@ -73,6 +91,8 @@ export function AuthProvider({ children }) {
             isAuthenticated,
             login,
             register,
+            verifyOtp,
+            resendOtp,
             logout,
         }),
         [user, loading, isAuthenticated],

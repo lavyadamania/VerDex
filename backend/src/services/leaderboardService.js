@@ -6,7 +6,8 @@
 //   2. Average resolution time (days)
 //   3. Adjournment rate (avg adjournments per case)
 //   4. Backlog size (pending cases)
-//   5. Justice Speed Index (composite score 0–100)
+//   5. Lifecycle completion score (start -> end progression)
+//   6. Justice Speed Index (composite score 0–100)
 //
 // Rankings are stored in Redis sorted sets for fast retrieval.
 // ============================================================
@@ -38,6 +39,13 @@ async function computeLeaderboard() {
   const redis = getRedis();
 
   try {
+    // Clear stale leaderboard cache to avoid mixing old and current court IDs.
+    await redis.del(REDIS_KEYS.LEADERBOARD);
+    const staleMetricKeys = await redis.keys('leaderboard:court:*');
+    if (staleMetricKeys.length > 0) {
+      await redis.del(...staleMetricKeys);
+    }
+
     // Get all courts
     const courts = await Court.find().lean();
 
@@ -170,21 +178,44 @@ async function computeLeaderboard() {
       const avgDelayScore = delay.avg_delay_score || 0;
       const stagnantCount = delay.stagnant_count || 0;
 
+      // ── Lifecycle Completion Score (0-100) ──
+      // Measures how far cases move from start (filed) to end states.
+      const lifecycleStageWeight = {
+        filed: 0.0,
+        hearing: 0.2,
+        evidence: 0.4,
+        arguments: 0.6,
+        reserved: 0.75,
+        judgment: 0.9,
+        disposed: 1.0,
+        appealed: 1.0,
+      };
+
+      const weightedStageSum = Object.entries(statusCounts).reduce((sum, [stage, count]) => {
+        const weight = lifecycleStageWeight[stage] ?? 0;
+        return sum + (weight * count);
+      }, 0);
+      const lifecycleCompletionScore = totalFiled > 0
+        ? (weightedStageSum / totalFiled) * 100
+        : 0;
+
       // ── Justice Speed Index (JSI) — Composite Score 0–100 ──
       // Higher is better. Weights:
-      //   40% = Resolution rate (higher → better)
-      //   25% = Speed (lower avg resolution time → better, capped at 365 days)
-      //   20% = Low adjournment rate (lower → better, capped at 10)
-      //   15% = Low delay risk (lower avg delay score → better)
+      //   35% = Resolution rate (higher -> better)
+      //   20% = Speed (lower avg resolution time -> better, capped at 365 days)
+      //   15% = Low adjournment rate (lower -> better, capped at 10)
+      //   15% = Low delay risk (lower avg delay score -> better)
+      //   15% = Lifecycle completion (start -> end progression)
       const speedScore = Math.max(0, 100 - (avgResolutionDays / 365) * 100);
       const adjournmentScore = Math.max(0, 100 - (avgAdjournments / 10) * 100);
       const delayScore = Math.max(0, 100 - (avgDelayScore / 10) * 100);
 
       const jsi = (
-        resolutionRate * 0.40 +
-        speedScore * 0.25 +
-        adjournmentScore * 0.20 +
-        delayScore * 0.15
+        resolutionRate * 0.35 +
+        speedScore * 0.20 +
+        adjournmentScore * 0.15 +
+        delayScore * 0.15 +
+        lifecycleCompletionScore * 0.15
       );
 
       const metrics = {
@@ -201,6 +232,7 @@ async function computeLeaderboard() {
         avg_adjournments: parseFloat((avgAdjournments || 0).toFixed(2)),
         avg_delay_score: parseFloat((avgDelayScore || 0).toFixed(2)),
         stagnant_cases: stagnantCount,
+        lifecycle_completion_score: parseFloat(lifecycleCompletionScore.toFixed(2)),
         justice_speed_index: parseFloat(jsi.toFixed(2)),
       };
 
@@ -344,6 +376,7 @@ async function getLeaderboard({ limit = 0, state = null } = {}) {
         avg_adjournments: parseFloat(metrics.avg_adjournments) || 0,
         avg_delay_score: parseFloat(metrics.avg_delay_score) || 0,
         stagnant_cases: parseInt(metrics.stagnant_cases) || 0,
+        lifecycle_completion_score: parseFloat(metrics.lifecycle_completion_score) || 0,
       });
     }
   }

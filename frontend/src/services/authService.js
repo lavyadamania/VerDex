@@ -20,6 +20,21 @@ const authService = {
         const res = await api.post('/auth/refresh', { refreshToken })
         return res.data?.data
     },
+
+    async verifyOtp(otp) {
+        const res = await api.post('/auth/verify-otp', { otp })
+        return res.data?.data
+    },
+
+    async resendOtp() {
+        const res = await api.post('/auth/resend-otp')
+        return res.data?.data
+    },
+
+    async logout() {
+        const res = await api.post('/auth/logout')
+        return res.data
+    },
 }
 
 export default authService

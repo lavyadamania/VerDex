@@ -7,6 +7,8 @@ import RegisterPage from './pages/RegisterPage'
 import VictimDashboardPage from './pages/VictimDashboardPage'
 import AdvocateDashboardPage from './pages/AdvocateDashboardPage'
 import PublicDashboardPage from './pages/PublicDashboardPage'
+import PublicCaseDetailPage from './pages/PublicCaseDetailPage'
+import PublicCourtDetailPage from './pages/PublicCourtDetailPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import UnauthorizedPage from './pages/UnauthorizedPage'
 
@@ -44,6 +46,24 @@ function App() {
                 element={
                     <AppShell title="Public Transparency Dashboard">
                         <PublicDashboardPage />
+                    </AppShell>
+                }
+            />
+
+            <Route
+                path="/dashboard/public/case/:maskedId"
+                element={
+                    <AppShell title="Public Case Detail">
+                        <PublicCaseDetailPage />
+                    </AppShell>
+                }
+            />
+
+            <Route
+                path="/dashboard/public/court/:courtId"
+                element={
+                    <AppShell title="Public Court Detail">
+                        <PublicCourtDetailPage />
                     </AppShell>
                 }
             />

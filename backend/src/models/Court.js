@@ -12,7 +12,7 @@ const courtSchema = new mongoose.Schema({
   court_type: {
     type: String,
     required: true,
-    enum: ['district', 'sessions', 'high_court', 'magistrate', 'special'],
+    enum: ['district', 'sessions', 'high_court', 'supreme', 'magistrate', 'special'],
   },
   district: {
     type: String,
