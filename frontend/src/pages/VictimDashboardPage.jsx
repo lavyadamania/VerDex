@@ -14,24 +14,26 @@ import disclosureService from '../services/disclosureService'
 import alertService from '../services/alertService'
 import courtService from '../services/courtService'
 import useAuth from '../hooks/useAuth'
+import useLiveEvents from '../hooks/useLiveEvents'
 import { formatDate, toSentence } from '../utils/formatters'
 import { riskLevelFromScore } from '../utils/risk'
 
 const initialCaseForm = (user) => ({
     cnr_number: '',
-    case_number: '',
     case_type: 'fraud',
     case_title: '',
     court_id: '',
     filing_date: '',
-    accused_id: '',
-    victim_id: user?._id || '',
-    judge_id: '',
     accused_name: '',
+    victim_statement: '',
+    // Backend optional fields (auto-filled or stub):
+    case_number: '',
+    victim_id: user?._id || '',
+    accused_id: '',
+    judge_id: '',
     judge_name: '',
     advocate_name: '',
     advocate_contact: '',
-    victim_statement: '',
 })
 
 function VictimDashboardPage() {
@@ -64,6 +66,9 @@ function VictimDashboardPage() {
     const [loading, setLoading] = useState(true)
     const [detailLoading, setDetailLoading] = useState(false)
     const [error, setError] = useState('')
+    const [updateFlash, setUpdateFlash] = useState(false)
+    const { events, status, pulseAt } = useLiveEvents()
+    const isLive = status === 'live'
 
     useEffect(() => {
         let mounted = true
@@ -143,6 +148,52 @@ function VictimDashboardPage() {
     }, [selectedCase?._id])
 
     useEffect(() => {
+        const latest = events[0]
+        if (!latest) return
+
+        const shouldRefresh = ['CASE_UPDATE', 'DELAY_ALERT', 'DISCLOSURE_UPDATE', 'LEADERBOARD_UPDATE'].includes(latest.type)
+        if (!shouldRefresh) return
+
+        async function refreshVictimView() {
+            try {
+                const [casesRes, alertsRes, unreadRes, myRequestsRes] = await Promise.all([
+                    caseService.listCases({ page: 1, limit: 20 }),
+                    alertService.list({ page: 1, limit: 10, filter: 'all' }),
+                    alertService.getUnreadCount(),
+                    disclosureService.getMyRequests(),
+                ])
+
+                const loadedCases = casesRes?.cases || []
+                setCases(loadedCases)
+                setApiAlerts(alertsRes?.alerts || [])
+                setUnreadAlertCount(unreadRes?.unread_count || 0)
+                setDisclosureRequests(myRequestsRes?.requests || [])
+
+                const nextSelected = loadedCases.find((c) => c._id === selectedCase?._id) || loadedCases[0] || null
+                setSelectedCase(nextSelected)
+
+                if (nextSelected?._id) {
+                    const [eventsRes, docsRes, historyRes] = await Promise.all([
+                        caseService.getCaseEvents(nextSelected._id),
+                        caseService.getCaseDocuments(nextSelected._id),
+                        disclosureService.getCaseHistory(nextSelected._id),
+                    ])
+                    setTimeline(eventsRes?.events || [])
+                    setDocuments(docsRes?.documents || [])
+                    setDisclosureHistory(historyRes?.history || [])
+                }
+
+                setUpdateFlash(true)
+                setTimeout(() => setUpdateFlash(false), 1200)
+            } catch {
+                // no-op for live update pull failures
+            }
+        }
+
+        refreshVictimView()
+    }, [pulseAt])
+
+    useEffect(() => {
         let mounted = true
 
         async function loadDisclosureHistory() {
@@ -173,13 +224,21 @@ function VictimDashboardPage() {
 
         try {
             setSubmittingCase(true)
-            const cnrValidation = await verificationService.validateCnr(formData.cnr_number)
-            if (!cnrValidation?.valid) {
-                setFormError('CNR format is invalid. Please correct before submit.')
-                return
+            const generatedCnr = `CNR-AUTO-${Date.now()}`
+            const cnrNumber = (formData.cnr_number || '').trim() || generatedCnr
+
+            // Validate only when user explicitly entered a CNR.
+            if ((formData.cnr_number || '').trim()) {
+                const cnrValidation = await verificationService.validateCnr(cnrNumber)
+                if (!cnrValidation?.valid) {
+                    setFormError('CNR format is invalid. Please correct before submit.')
+                    return
+                }
             }
+
             const payload = {
                 ...formData,
+                cnr_number: cnrNumber,
                 victim_id: user?._id || formData.victim_id,
                 filing_date: formData.filing_date,
             }
@@ -397,73 +456,88 @@ function VictimDashboardPage() {
                             <ShieldCheck className="h-4 w-4" />
                             Verified victim access
                         </span>
-                        <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">
-                            <MapPin className="h-4 w-4" />
-                            Court city and level come from the selected court
+                        <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                            <FilePlus2 className="h-4 w-4" />
+                            Simple form — just the essentials
                         </span>
                     </div>
 
                     {showCaseForm ? (
-                        <form onSubmit={handleCaseSubmit} className="mt-6 grid gap-4 md:grid-cols-2">
-                            <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="CNR Number" value={formData.cnr_number} onChange={(e) => updateFormField('cnr_number', e.target.value)} required />
-                            <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Case Number" value={formData.case_number} onChange={(e) => updateFormField('case_number', e.target.value)} />
+                        <form onSubmit={handleCaseSubmit} className="mt-6 space-y-4 max-w-2xl">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Case Type *</label>
+                                <select className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" value={formData.case_type} onChange={(e) => updateFormField('case_type', e.target.value)} required>
+                                    <option value="fraud">Fraud</option>
+                                    <option value="domestic_violence">Domestic Violence</option>
+                                    <option value="cybercrime">Cybercrime</option>
+                                    <option value="sexual_assault">Sexual Assault</option>
+                                    <option value="theft">Theft</option>
+                                    <option value="kidnapping">Kidnapping</option>
+                                    <option value="murder">Murder</option>
+                                    <option value="dowry">Dowry</option>
+                                    <option value="other">Other</option>
+                                </select>
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Select the primary type of your case</p>
+                            </div>
 
-                            <select className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" value={formData.case_type} onChange={(e) => updateFormField('case_type', e.target.value)} required>
-                                <option value="murder">Murder</option>
-                                <option value="fraud">Fraud</option>
-                                <option value="cybercrime">Cybercrime</option>
-                                <option value="theft">Theft</option>
-                                <option value="kidnapping">Kidnapping</option>
-                                <option value="domestic_violence">Domestic Violence</option>
-                                <option value="dowry">Dowry</option>
-                                <option value="sexual_assault">Sexual Assault</option>
-                                <option value="other">Other</option>
-                            </select>
-                            <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Case Title" value={formData.case_title} onChange={(e) => updateFormField('case_title', e.target.value)} />
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Case Title / Brief Description *</label>
+                                <input className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="e.g., Property Fraud Case, Harassment Matter" value={formData.case_title} onChange={(e) => updateFormField('case_title', e.target.value)} required />
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Give your case a clear, short title</p>
+                            </div>
 
-                            <select className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" value={formData.court_id} onChange={(e) => updateFormField('court_id', e.target.value)} required>
-                                <option value="">Select Court</option>
-                                {courts.map((court) => (
-                                    <option key={court._id} value={court._id}>
-                                        {court.court_name} - {court.district}
-                                    </option>
-                                ))}
-                            </select>
-                            <input type="date" className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" value={formData.filing_date} onChange={(e) => updateFormField('filing_date', e.target.value)} required />
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Court *</label>
+                                <select className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" value={formData.court_id} onChange={(e) => updateFormField('court_id', e.target.value)} required>
+                                    <option value="">Select your court</option>
+                                    {courts.map((court) => (
+                                        <option key={court._id} value={court._id}>
+                                            {court.court_name} • {court.district}
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Choose the court where your case is filed</p>
+                            </div>
 
-                            <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Accused ID" value={formData.accused_id} onChange={(e) => updateFormField('accused_id', e.target.value)} required />
-                            <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Accused Name" value={formData.accused_name} onChange={(e) => updateFormField('accused_name', e.target.value)} />
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Filing Date *</label>
+                                <input type="date" className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" value={formData.filing_date} onChange={(e) => updateFormField('filing_date', e.target.value)} required />
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">When was the case filed in court?</p>
+                            </div>
 
-                            <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Judge ID" value={formData.judge_id} onChange={(e) => updateFormField('judge_id', e.target.value)} required />
-                            <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Judge Name" value={formData.judge_name} onChange={(e) => updateFormField('judge_name', e.target.value)} />
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Accused Name (if known)</label>
+                                <input className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Name of the accused party" value={formData.accused_name} onChange={(e) => updateFormField('accused_name', e.target.value)} />
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Optional — can add this later</p>
+                            </div>
 
-                            <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Victim ID" value={formData.victim_id} readOnly required />
-                            <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Advocate Name" value={formData.advocate_name} onChange={(e) => updateFormField('advocate_name', e.target.value)} />
-
-                            <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 md:col-span-2" placeholder="Advocate Contact" value={formData.advocate_contact} onChange={(e) => updateFormField('advocate_contact', e.target.value)} />
-                            <textarea className="min-h-28 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 md:col-span-2" placeholder="Victim statement" value={formData.victim_statement} onChange={(e) => updateFormField('victim_statement', e.target.value)} />
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Your Statement</label>
+                                <textarea className="w-full min-h-32 rounded-lg border border-slate-300 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Brief description of the case and what happened" value={formData.victim_statement} onChange={(e) => updateFormField('victim_statement', e.target.value)} />
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Share the key details of your case</p>
+                            </div>
 
                             {selectedCourt ? (
-                                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 md:col-span-2">
-                                    Selected court: <span className="font-semibold text-slate-900 dark:text-slate-100">{selectedCourt.court_name}</span> in {selectedCourt.district} ({selectedCourt.court_type})
+                                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
+                                    ✓ Case will be filed in: <span className="font-semibold">{selectedCourt.court_name}</span> ({selectedCourt.district}, {selectedCourt.state})
                                 </div>
                             ) : null}
 
-                            {formError ? <p className="text-sm text-rose-600 md:col-span-2">{formError}</p> : null}
-                            {formSuccess ? <p className="text-sm text-emerald-600 md:col-span-2">{formSuccess}</p> : null}
+                            {formError ? <p className="text-sm text-rose-600 font-medium">{formError}</p> : null}
+                            {formSuccess ? <p className="text-sm text-emerald-600 font-medium">{formSuccess}</p> : null}
 
-                            <div className="md:col-span-2 flex justify-end gap-3">
-                                <button type="button" onClick={() => setShowCaseForm(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200">
+                            <div className="flex justify-end gap-3 pt-2">
+                                <button type="button" onClick={() => setShowCaseForm(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
                                     Cancel
                                 </button>
-                                <button type="submit" disabled={submittingCase} className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60">
+                                <button type="submit" disabled={submittingCase} className="rounded-lg bg-brand-700 px-6 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60">
                                     {submittingCase ? 'Submitting...' : 'Submit Case'}
                                 </button>
                             </div>
                         </form>
                     ) : (
                         <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-                            Add a new case from the victim dashboard, then it will appear in your monitored record list after submission.
+                            Add your case details and monitor its progress on your dashboard.
                         </p>
                     )}
                 </Card>
@@ -478,6 +552,13 @@ function VictimDashboardPage() {
 
     return (
         <div className="space-y-6">
+            <div className="flex items-center justify-end gap-2 text-xs text-slate-500 dark:text-slate-400">
+                <span className={`rounded-full px-2 py-0.5 font-semibold ${isLive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'}`}>
+                    {isLive ? '🟢 Live' : '🔴 Reconnecting...'}
+                </span>
+                {updateFlash ? <span className="animate-pulse font-semibold text-amber-600 dark:text-amber-300">Updating</span> : null}
+            </div>
+
             <Card
                 title="Add a New Case"
                 subtitle="Victim-only case registration"
@@ -497,73 +578,88 @@ function VictimDashboardPage() {
                         <ShieldCheck className="h-4 w-4" />
                         Verified victim access
                     </span>
-                    <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">
-                        <MapPin className="h-4 w-4" />
-                        Court level and city come from the selected court
+                    <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                        <FilePlus2 className="h-4 w-4" />
+                        Simple form — just the essentials
                     </span>
                 </div>
 
                 {showCaseForm ? (
-                    <form onSubmit={handleCaseSubmit} className="mt-6 grid gap-4 md:grid-cols-2">
-                        <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="CNR Number" value={formData.cnr_number} onChange={(e) => updateFormField('cnr_number', e.target.value)} required />
-                        <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Case Number" value={formData.case_number} onChange={(e) => updateFormField('case_number', e.target.value)} />
+                    <form onSubmit={handleCaseSubmit} className="mt-6 space-y-4 max-w-2xl">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Case Type *</label>
+                            <select className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" value={formData.case_type} onChange={(e) => updateFormField('case_type', e.target.value)} required>
+                                <option value="fraud">Fraud</option>
+                                <option value="domestic_violence">Domestic Violence</option>
+                                <option value="cybercrime">Cybercrime</option>
+                                <option value="sexual_assault">Sexual Assault</option>
+                                <option value="theft">Theft</option>
+                                <option value="kidnapping">Kidnapping</option>
+                                <option value="murder">Murder</option>
+                                <option value="dowry">Dowry</option>
+                                <option value="other">Other</option>
+                            </select>
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Select the primary type of your case</p>
+                        </div>
 
-                        <select className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" value={formData.case_type} onChange={(e) => updateFormField('case_type', e.target.value)} required>
-                            <option value="murder">Murder</option>
-                            <option value="fraud">Fraud</option>
-                            <option value="cybercrime">Cybercrime</option>
-                            <option value="theft">Theft</option>
-                            <option value="kidnapping">Kidnapping</option>
-                            <option value="domestic_violence">Domestic Violence</option>
-                            <option value="dowry">Dowry</option>
-                            <option value="sexual_assault">Sexual Assault</option>
-                            <option value="other">Other</option>
-                        </select>
-                        <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Case Title" value={formData.case_title} onChange={(e) => updateFormField('case_title', e.target.value)} />
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Case Title / Brief Description *</label>
+                            <input className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="e.g., Property Fraud Case, Harassment Matter" value={formData.case_title} onChange={(e) => updateFormField('case_title', e.target.value)} required />
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Give your case a clear, short title</p>
+                        </div>
 
-                        <select className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" value={formData.court_id} onChange={(e) => updateFormField('court_id', e.target.value)} required>
-                            <option value="">Select Court</option>
-                            {courts.map((court) => (
-                                <option key={court._id} value={court._id}>
-                                    {court.court_name} - {court.district}
-                                </option>
-                            ))}
-                        </select>
-                        <input type="date" className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" value={formData.filing_date} onChange={(e) => updateFormField('filing_date', e.target.value)} required />
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Court *</label>
+                            <select className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" value={formData.court_id} onChange={(e) => updateFormField('court_id', e.target.value)} required>
+                                <option value="">Select your court</option>
+                                {courts.map((court) => (
+                                    <option key={court._id} value={court._id}>
+                                        {court.court_name} • {court.district}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Choose the court where your case is filed</p>
+                        </div>
 
-                        <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Accused ID" value={formData.accused_id} onChange={(e) => updateFormField('accused_id', e.target.value)} required />
-                        <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Accused Name" value={formData.accused_name} onChange={(e) => updateFormField('accused_name', e.target.value)} />
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Filing Date *</label>
+                            <input type="date" className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" value={formData.filing_date} onChange={(e) => updateFormField('filing_date', e.target.value)} required />
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">When was the case filed in court?</p>
+                        </div>
 
-                        <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Judge ID" value={formData.judge_id} onChange={(e) => updateFormField('judge_id', e.target.value)} required />
-                        <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Judge Name" value={formData.judge_name} onChange={(e) => updateFormField('judge_name', e.target.value)} />
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Accused Name (if known)</label>
+                            <input className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Name of the accused party" value={formData.accused_name} onChange={(e) => updateFormField('accused_name', e.target.value)} />
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Optional — can add this later</p>
+                        </div>
 
-                        <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Victim ID" value={formData.victim_id} readOnly required />
-                        <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Advocate Name" value={formData.advocate_name} onChange={(e) => updateFormField('advocate_name', e.target.value)} />
-
-                        <input className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 md:col-span-2" placeholder="Advocate Contact" value={formData.advocate_contact} onChange={(e) => updateFormField('advocate_contact', e.target.value)} />
-                        <textarea className="min-h-28 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950 md:col-span-2" placeholder="Victim statement" value={formData.victim_statement} onChange={(e) => updateFormField('victim_statement', e.target.value)} />
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Your Statement</label>
+                            <textarea className="w-full min-h-32 rounded-lg border border-slate-300 px-4 py-2 text-sm dark:border-slate-700 dark:bg-slate-950" placeholder="Brief description of the case and what happened" value={formData.victim_statement} onChange={(e) => updateFormField('victim_statement', e.target.value)} />
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Share the key details of your case</p>
+                        </div>
 
                         {selectedCourt ? (
-                            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300 md:col-span-2">
-                                Selected court: <span className="font-semibold text-slate-900 dark:text-slate-100">{selectedCourt.court_name}</span> in {selectedCourt.district} ({selectedCourt.court_type})
+                            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
+                                ✓ Case will be filed in: <span className="font-semibold">{selectedCourt.court_name}</span> ({selectedCourt.district}, {selectedCourt.state})
                             </div>
                         ) : null}
 
-                        {formError ? <p className="text-sm text-rose-600 md:col-span-2">{formError}</p> : null}
-                        {formSuccess ? <p className="text-sm text-emerald-600 md:col-span-2">{formSuccess}</p> : null}
+                        {formError ? <p className="text-sm text-rose-600 font-medium">{formError}</p> : null}
+                        {formSuccess ? <p className="text-sm text-emerald-600 font-medium">{formSuccess}</p> : null}
 
-                        <div className="md:col-span-2 flex justify-end gap-3">
-                            <button type="button" onClick={() => setShowCaseForm(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200">
+                        <div className="flex justify-end gap-3 pt-2">
+                            <button type="button" onClick={() => setShowCaseForm(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900">
                                 Cancel
                             </button>
-                            <button type="submit" disabled={submittingCase} className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60">
+                            <button type="submit" disabled={submittingCase} className="rounded-lg bg-brand-700 px-6 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60">
                                 {submittingCase ? 'Submitting...' : 'Submit Case'}
                             </button>
                         </div>
                     </form>
                 ) : (
                     <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-                        Add a new case from the victim dashboard, then it will appear in your monitored record list after submission.
+                        Add your case details and monitor its progress on your dashboard.
                     </p>
                 )}
             </Card>
@@ -605,8 +701,8 @@ function VictimDashboardPage() {
                                 type="button"
                                 onClick={() => setSelectedCase(caseItem)}
                                 className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${selectedCase?._id === caseItem._id
-                                        ? 'border-brand-700 bg-brand-50 text-brand-900 dark:border-brand-100 dark:bg-slate-800 dark:text-slate-100'
-                                        : 'border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800'
+                                    ? 'border-brand-700 bg-brand-50 text-brand-900 dark:border-brand-100 dark:bg-slate-800 dark:text-slate-100'
+                                    : 'border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800'
                                     }`}
                             >
                                 <p className="font-semibold">{caseItem.case_title || caseItem.cnr_number}</p>

@@ -20,6 +20,22 @@ const logger = require('../utils/logger');
 // Map<channel, Set<callback>>
 const memorySubscribers = new Map();
 
+const REALTIME_CHANNELS = {
+  CASE_UPDATE: 'case_updates',
+  DELAY_ALERT: 'delay_alerts',
+  LEADERBOARD_UPDATE: 'leaderboard_updates',
+  DISCLOSURE_UPDATE: 'case_updates',
+};
+
+function buildRealtimeEnvelope(type, caseId, payload = {}) {
+  return {
+    type,
+    caseId: caseId ? caseId.toString() : null,
+    payload,
+    timestamp: Date.now(),
+  };
+}
+
 /**
  * Publish an event to a specific user's channel.
  *
@@ -41,6 +57,24 @@ async function publishToUser(userId, eventType, payload) {
  */
 async function publishToAll(eventType, payload) {
   await _publish('global', eventType, payload);
+}
+
+/**
+ * Publish standardized real-time events for dashboards.
+ * Payload format:
+ * { type, caseId, payload, timestamp }
+ */
+async function publishRealtimeEvent(type, caseId, payload = {}) {
+  const envelope = buildRealtimeEnvelope(type, caseId, payload);
+  const channel = REALTIME_CHANNELS[type] || 'case_updates';
+
+  // Publish to dedicated channel for server-side fanout
+  await _publish(channel, type, envelope);
+
+  // Publish globally so direct SSE subscribers can also receive it
+  await _publish('global', type, envelope);
+
+  return envelope;
 }
 
 /**
@@ -187,6 +221,9 @@ function getSubscriberCount() {
 module.exports = {
   publishToUser,
   publishToAll,
+  publishRealtimeEvent,
+  buildRealtimeEnvelope,
+  REALTIME_CHANNELS,
   subscribe,
   getSubscriberCount,
 };

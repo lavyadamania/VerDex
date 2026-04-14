@@ -12,6 +12,7 @@ import mapService from '../services/mapService'
 import { Clock3, Trophy } from 'lucide-react'
 import { formatNumber, toSentence } from '../utils/formatters'
 import { riskLevelFromScore } from '../utils/risk'
+import useLiveEvents from '../hooks/useLiveEvents'
 
 function PublicDashboardPage() {
     const [cases, setCases] = useState([])
@@ -21,6 +22,28 @@ function PublicDashboardPage() {
     const [lastUpdated, setLastUpdated] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
+    const [updateFlash, setUpdateFlash] = useState(false)
+    const { events, status, pulseAt } = useLiveEvents()
+
+    const isLive = status === 'live'
+
+    async function refreshCasesAndStats() {
+        const [casesRes, statsRes] = await Promise.all([
+            publicService.listCases({ page: 1, limit: 50 }),
+            publicService.getStats(),
+        ])
+        setCases(casesRes?.cases || [])
+        setStats(statsRes)
+    }
+
+    async function refreshLeaderboardAndMap() {
+        const [courtsRes, mapStatsRes] = await Promise.all([
+            publicService.getLeaderboard(),
+            mapService.getStats(),
+        ])
+        setLeaderboard(courtsRes?.leaderboard || [])
+        setMapStats(mapStatsRes || null)
+    }
 
     useEffect(() => {
         let mounted = true
@@ -28,7 +51,7 @@ function PublicDashboardPage() {
         async function loadData() {
             try {
                 setLoading(true)
-                const [casesRes, statsRes, courtsRes, mapStatsRes] = await Promise.all([
+                const [casesRes, statsRes, courtsRes, mapStatsRes] = await Promise.allSettled([
                     publicService.listCases({ page: 1, limit: 50 }),
                     publicService.getStats(),
                     publicService.getLeaderboard(),
@@ -36,10 +59,10 @@ function PublicDashboardPage() {
                 ])
 
                 if (!mounted) return
-                setCases(casesRes?.cases || [])
-                setStats(statsRes)
-                setLeaderboard(courtsRes?.leaderboard || [])
-                setMapStats(mapStatsRes || null)
+                setCases(casesRes.status === 'fulfilled' ? (casesRes.value?.cases || []) : [])
+                setStats(statsRes.status === 'fulfilled' ? statsRes.value : null)
+                setLeaderboard(courtsRes.status === 'fulfilled' ? (courtsRes.value?.leaderboard || []) : [])
+                setMapStats(mapStatsRes.status === 'fulfilled' ? (mapStatsRes.value || null) : null)
                 setLastUpdated(new Date())
             } catch (err) {
                 if (mounted) setError(err?.response?.data?.error || 'Unable to load transparency dashboard.')
@@ -49,12 +72,30 @@ function PublicDashboardPage() {
         }
 
         loadData()
-        const timer = setInterval(loadData, 30000)
         return () => {
             mounted = false
-            clearInterval(timer)
         }
     }, [])
+
+    useEffect(() => {
+        const latest = events[0]
+        if (!latest) return
+
+        if (latest.type === 'CASE_UPDATE' || latest.type === 'DELAY_ALERT' || latest.type === 'DISCLOSURE_UPDATE') {
+            refreshCasesAndStats().catch(() => { })
+            setLastUpdated(new Date())
+            setUpdateFlash(true)
+            setTimeout(() => setUpdateFlash(false), 1200)
+            return
+        }
+
+        if (latest.type === 'LEADERBOARD_UPDATE') {
+            refreshLeaderboardAndMap().catch(() => { })
+            setLastUpdated(new Date())
+            setUpdateFlash(true)
+            setTimeout(() => setUpdateFlash(false), 1200)
+        }
+    }, [pulseAt])
 
     const statusChartData = useMemo(() => {
         const source = stats?.by_status || {}
@@ -187,6 +228,10 @@ function PublicDashboardPage() {
                 subtitle="Ranked by end-to-end lifecycle and overall court score"
                 action={
                     <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                        <span className={`rounded-full px-2 py-0.5 font-semibold ${isLive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'}`}>
+                            {isLive ? '🟢 Live' : '🔴 Reconnecting...'}
+                        </span>
+                        {updateFlash ? <span className="animate-pulse font-semibold text-amber-600 dark:text-amber-300">Updating</span> : null}
                         <Trophy className="h-4 w-4 text-amber-500" />
                         <Clock3 className="h-4 w-4" />
                         <span>{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Live'}</span>

@@ -15,6 +15,7 @@ const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const { authorize } = require('../middleware/rbac');
 const { subscribe } = require('../services/eventPublisher');
+const { registerConnection, cleanupConnection, getConnectionStats } = require('../services/sseBroker');
 const logger = require('../utils/logger');
 
 // ── Active SSE connections registry ──
@@ -25,11 +26,8 @@ const activeConnections = new Map();
  * Get the count of active SSE connections.
  */
 function getActiveConnectionCount() {
-  let total = 0;
-  for (const conns of activeConnections.values()) {
-    total += conns.size;
-  }
-  return total;
+  const stats = getConnectionStats();
+  return stats.total_connections;
 }
 
 // ============================================================
@@ -46,37 +44,43 @@ router.get('/events', async (req, res, next) => {
   try {
     // ── Auth via query param (EventSource can't set headers) ──
     const token = req.query.token;
+
+    let user;
+    let userId;
+
     if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication token required. Pass as ?token=JWT',
-      });
+      userId = `visitor-${Date.now()}-${Math.round(Math.random() * 1000)}`;
+      user = {
+        _id: userId,
+        full_name: 'Public Visitor',
+        role: 'visitor',
+      };
+    } else {
+      // Manually verify JWT
+      const jwt = require('jsonwebtoken');
+      const env = require('../config/env');
+      const User = require('../models/User');
+
+      let decoded;
+      try {
+        decoded = jwt.verify(token, env.JWT_SECRET);
+      } catch (err) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid or expired token',
+        });
+      }
+
+      user = await User.findById(decoded.userId).select('_id full_name role');
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not found',
+        });
+      }
+
+      userId = user._id.toString();
     }
-
-    // Manually verify JWT
-    const jwt = require('jsonwebtoken');
-    const env = require('../config/env');
-    const User = require('../models/User');
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, env.JWT_SECRET);
-    } catch (err) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired token',
-      });
-    }
-
-    const user = await User.findById(decoded.userId).select('_id full_name role');
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not found',
-      });
-    }
-
-    const userId = user._id.toString();
 
     // ── Set SSE headers ──
     res.writeHead(200, {
@@ -104,11 +108,12 @@ router.get('/events', async (req, res, next) => {
       activeConnections.set(userId, new Set());
     }
     activeConnections.get(userId).add(res);
+    const connectionId = registerConnection({ userId, role: user.role, res });
 
     logger.info(`📡 SSE connected: ${user.full_name} (${userId}) — ${getActiveConnectionCount()} total`);
 
     // ── Subscribe to Redis Pub/Sub channels ──
-    const channels = [`user:${userId}`, 'global'];
+    const channels = user.role === 'visitor' ? ['global'] : [`user:${userId}`, 'global'];
 
     const subscription = subscribe(channels, (channel, message) => {
       // Forward message to SSE client
@@ -124,10 +129,10 @@ router.get('/events', async (req, res, next) => {
     const heartbeatInterval = setInterval(() => {
       try {
         res.write(`: heartbeat\n\n`);
-      } catch (err) {
+      } catch (_err) {
         clearInterval(heartbeatInterval);
       }
-    }, 30000); // Every 30 seconds
+    }, 10000); // Every 10 seconds
 
     // ── Cleanup on disconnect ──
     const cleanup = () => {
@@ -144,8 +149,17 @@ router.get('/events', async (req, res, next) => {
 
       // Unsubscribe from Redis channels
       if (subscription && subscription.unsubscribe) {
-        subscription.unsubscribe().catch(() => {});
+        try {
+          const unsubResult = subscription.unsubscribe();
+          if (unsubResult && typeof unsubResult.then === 'function') {
+            unsubResult.catch(() => { });
+          }
+        } catch (_err) {
+          // ignore unsubscribe cleanup errors
+        }
       }
+
+      cleanupConnection(connectionId);
 
       logger.info(`📡 SSE disconnected: ${userId} — ${getActiveConnectionCount()} remaining`);
     };
@@ -162,19 +176,17 @@ router.get('/events', async (req, res, next) => {
 // GET /api/sse/status — Connection stats (admin only)
 // ============================================================
 router.get('/status', authenticate, authorize('admin'), (req, res) => {
-  const connections = [];
-  for (const [userId, conns] of activeConnections.entries()) {
-    connections.push({
-      userId,
-      connectionCount: conns.size,
-    });
-  }
+  const stats = getConnectionStats();
+  const connections = Object.entries(stats.by_user).map(([userId, connectionCount]) => ({
+    userId,
+    connectionCount,
+  }));
 
   res.json({
     success: true,
     data: {
-      total_connections: getActiveConnectionCount(),
-      unique_users: activeConnections.size,
+      total_connections: stats.total_connections,
+      unique_users: stats.unique_users,
       connections,
     },
   });

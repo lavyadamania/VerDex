@@ -2,7 +2,7 @@
 // Event Service — Real-Time Event Emission
 // ============================================================
 const Event = require('../models/Event');
-const { getRedis } = require('../config/redis');
+const { publishRealtimeEvent } = require('./eventPublisher');
 const logger = require('../utils/logger');
 
 /**
@@ -47,8 +47,7 @@ async function emitCaseEvent(data) {
       eventDate: new Date(),
     });
 
-    // ── Publish to Redis ──
-    const redis = getRedis();
+    // ── Publish standardized real-time event to Redis ──
     const eventPayload = {
       _id: event._id.toString(),
       caseId: caseId.toString(),
@@ -62,7 +61,12 @@ async function emitCaseEvent(data) {
       createdAt: event.createdAt.toISOString(),
     };
 
-    await redis.publish('case_updates', JSON.stringify(eventPayload));
+    // Convert domain event into realtime feed event type.
+    const realtimeType = ['DELAY_ALERT', 'STAGNATION_FLAG'].includes(type)
+      ? 'DELAY_ALERT'
+      : 'CASE_UPDATE';
+
+    await publishRealtimeEvent(realtimeType, caseId, eventPayload);
 
     logger.info(`📡 Event emitted: ${type} for case ${caseId}`);
 

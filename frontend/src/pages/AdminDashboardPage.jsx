@@ -20,6 +20,7 @@ import sseService from '../services/sseService'
 import documentService from '../services/documentService'
 import eventService from '../services/eventService'
 import useAuth from '../hooks/useAuth'
+import useLiveEvents from '../hooks/useLiveEvents'
 import { formatNumber } from '../utils/formatters'
 import { riskLevelFromScore } from '../utils/risk'
 
@@ -58,6 +59,9 @@ function AdminDashboardPage() {
     const [aiDocumentId, setAiDocumentId] = useState('')
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
+    const [updateFlash, setUpdateFlash] = useState(false)
+    const { events, status, pulseAt } = useLiveEvents()
+    const isLive = status === 'live'
 
     useEffect(() => {
         let mounted = true
@@ -65,7 +69,7 @@ function AdminDashboardPage() {
         async function loadAdminData() {
             try {
                 setLoading(true)
-                const [summaryRes, leaderboardRes, delayedRes] = await Promise.all([
+                const [summaryRes, leaderboardRes, delayedRes] = await Promise.allSettled([
                     caseService.getDelaySummary(),
                     courtService.getLeaderboard(),
                     caseService.getDelayedCases({ level: 'all', page: 1, limit: 8 }),
@@ -95,9 +99,9 @@ function AdminDashboardPage() {
                     : null
 
                 if (!mounted) return
-                setSummary(summaryRes)
-                setLeaderboard(leaderboardRes?.leaderboard || [])
-                setDelayedCases(delayedRes?.cases || [])
+                setSummary(summaryRes.status === 'fulfilled' ? summaryRes.value : null)
+                setLeaderboard(leaderboardRes.status === 'fulfilled' ? (leaderboardRes.value?.leaderboard || []) : [])
+                setDelayedCases(delayedRes.status === 'fulfilled' ? (delayedRes.value?.cases || []) : [])
 
                 if (fullAdminData) {
                     const [statsRes, courtRes, alertsRes, pendingDisclosureRes, verificationUsersRes, errorSummaryRes, errorCasesRes, aiStatusRes, aiQueueRes, delayRedisRes, leaderboardStatsRes, sseStatusRes, adminCasesRes, stuckCasesRes, auditLogsRes, adminUsersRes, caseStatsRes, eventStatsRes] = fullAdminData
@@ -132,6 +136,54 @@ function AdminDashboardPage() {
             mounted = false
         }
     }, [])
+
+    useEffect(() => {
+        const latest = events[0]
+        if (!latest) return
+
+        async function runTargetedRefresh() {
+            try {
+                if (latest.type === 'LEADERBOARD_UPDATE') {
+                    const [leaderboardRes, leaderboardStatsRes] = await Promise.all([
+                        courtService.getLeaderboard(),
+                        leaderboardService.getStats(),
+                    ])
+                    setLeaderboard(leaderboardRes?.leaderboard || [])
+                    setLeaderboardStats(leaderboardStatsRes || null)
+                }
+
+                if (latest.type === 'CASE_UPDATE' || latest.type === 'DELAY_ALERT' || latest.type === 'DISCLOSURE_UPDATE') {
+                    const [summaryRes, delayedRes] = await Promise.all([
+                        caseService.getDelaySummary(),
+                        caseService.getDelayedCases({ level: 'all', page: 1, limit: 8 }),
+                    ])
+                    setSummary(summaryRes)
+                    setDelayedCases(delayedRes?.cases || [])
+
+                    if (user?.role === 'admin') {
+                        const [alertsRes, pendingDisclosureRes] = await Promise.all([
+                            alertService.listAll({ page: 1, limit: 8 }),
+                            disclosureService.listPending({ page: 1, limit: 8 }),
+                        ])
+                        setAdminAlerts(alertsRes?.alerts || [])
+                        setPendingDisclosures(pendingDisclosureRes?.requests || [])
+                    }
+                }
+
+                if (user?.role === 'admin') {
+                    const sseStatusRes = await sseService.getStatus()
+                    setSseStatus(sseStatusRes || null)
+                }
+
+                setUpdateFlash(true)
+                setTimeout(() => setUpdateFlash(false), 1200)
+            } catch {
+                // no-op for non-blocking realtime refresh
+            }
+        }
+
+        runTargetedRefresh()
+    }, [pulseAt])
 
     const chartData = useMemo(() => {
         if (!summary) return []
@@ -364,9 +416,9 @@ function AdminDashboardPage() {
                     <button type="button" onClick={() => setCaseStatus(row._id, 'disposed')} className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold dark:border-slate-700">Dispose</button>
                     <button type="button" onClick={() => addFollowupEvent(row._id)} className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold dark:border-slate-700">Add Event</button>
                     <button type="button" onClick={() => runCaseScan(row._id)} className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold dark:border-slate-700">Scan</button>
-                            <button type="button" onClick={() => loadCaseDetailAndAudit(row._id)} className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold dark:border-slate-700">Detail</button>
-                            <button type="button" onClick={() => quickUpdateCaseTitle(row._id)} className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold dark:border-slate-700">Update</button>
-                            <button type="button" onClick={() => quickDeleteCase(row._id)} className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold dark:border-slate-700">Delete</button>
+                    <button type="button" onClick={() => loadCaseDetailAndAudit(row._id)} className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold dark:border-slate-700">Detail</button>
+                    <button type="button" onClick={() => quickUpdateCaseTitle(row._id)} className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold dark:border-slate-700">Update</button>
+                    <button type="button" onClick={() => quickDeleteCase(row._id)} className="rounded border border-slate-300 px-2 py-1 text-xs font-semibold dark:border-slate-700">Delete</button>
                 </div>
             ),
         },
@@ -382,6 +434,13 @@ function AdminDashboardPage() {
 
     return (
         <div className="space-y-6">
+            <div className="flex items-center justify-end gap-2 text-xs text-slate-500 dark:text-slate-400">
+                <span className={`rounded-full px-2 py-0.5 font-semibold ${isLive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'}`}>
+                    {isLive ? '🟢 Live' : '🔴 Reconnecting...'}
+                </span>
+                {updateFlash ? <span className="animate-pulse font-semibold text-amber-600 dark:text-amber-300">Updating</span> : null}
+            </div>
+
             <div className="grid gap-4 md:grid-cols-3">
                 <Card title="Total Active Cases" subtitle="Currently under process">
                     <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">{formatNumber(summary?.overview?.total_active_cases)}</p>

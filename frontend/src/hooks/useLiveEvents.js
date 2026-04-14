@@ -1,115 +1,234 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { io } from 'socket.io-client'
 
-/**
- * useLiveEvents Hook
- *
- * Connects to Socket.io server and manages real-time event stream.
- * Features:
- * - JWT authentication via token
- * - Automatic reconnection
- * - Event filtering based on payload
- * - History pagination with initial load
- * - Room management (user, role, case-specific)
- *
- * Usage:
- *   const { events, connecting, error, joinCase, leaveCase } = useLiveEvents()
- */
+const MAX_EVENTS = 200
+const subscribers = new Set()
+
+const globalState = {
+  events: [],
+  connected: false,
+  connecting: false,
+  status: 'idle', // idle | live | reconnecting | offline
+  source: 'none', // sse | socket | none
+  error: null,
+  pulseAt: 0,
+}
+
+let sseSource = null
+let socketRef = null
+let reconnectTimer = null
+let reconnectAttempts = 0
+const seenEventKeys = new Set()
+
+function notify() {
+  subscribers.forEach((listener) => {
+    try {
+      listener({ ...globalState })
+    } catch {
+      // Ignore subscriber errors
+    }
+  })
+}
+
+function createEventKey(evt) {
+  const type = evt?.type || 'UNKNOWN'
+  const caseId = evt?.caseId || evt?.payload?.caseId || 'none'
+  const ts = evt?.timestamp || evt?.createdAt || Date.now()
+  return `${type}:${caseId}:${ts}`
+}
+
+function normalizeEvent(evt) {
+  const type = evt?.type || 'CASE_UPDATE'
+  const payload = evt?.payload || evt?.data || evt || {}
+  const timestamp = evt?.timestamp || Date.now()
+
+  return {
+    _id: payload?._id || `${type}-${timestamp}-${Math.round(Math.random() * 1e6)}`,
+    type,
+    caseId: evt?.caseId || payload?.caseId || null,
+    payload,
+    message: payload?.message || evt?.message || type,
+    timestamp,
+    createdAt: new Date(timestamp).toISOString(),
+  }
+}
+
+function ingestEvent(rawEvent) {
+  const event = normalizeEvent(rawEvent)
+  const key = createEventKey(event)
+
+  if (seenEventKeys.has(key)) return
+  seenEventKeys.add(key)
+  if (seenEventKeys.size > 1000) {
+    const first = seenEventKeys.values().next().value
+    seenEventKeys.delete(first)
+  }
+
+  globalState.events = [event, ...globalState.events].slice(0, MAX_EVENTS)
+  globalState.pulseAt = Date.now()
+  notify()
+}
+
+function resolveSseBase() {
+  const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+  if (apiBase.startsWith('http://') || apiBase.startsWith('https://')) return apiBase
+  return `${window.location.origin}${apiBase}`
+}
+
+function setConnectionState(partial) {
+  Object.assign(globalState, partial)
+  notify()
+}
+
+function connectSocketFallback() {
+  if (socketRef?.connected) return
+
+  const token = localStorage.getItem('ct_token')
+  const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+
+  socketRef = io(apiBase, {
+    auth: { token: token || '' },
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    reconnectionAttempts: 20,
+  })
+
+  socketRef.on('connect', () => {
+    setConnectionState({ connected: true, connecting: false, status: 'live', source: 'socket', error: null })
+  })
+
+  socketRef.on('disconnect', () => {
+    setConnectionState({ connected: false, connecting: false, status: 'offline', source: 'none' })
+  })
+
+  socketRef.on('connect_error', (err) => {
+    setConnectionState({ connected: false, connecting: false, status: 'offline', source: 'none', error: err?.message || 'Socket connection error' })
+  })
+
+  socketRef.on('live_event', (eventPayload) => {
+    ingestEvent(eventPayload)
+  })
+}
+
+function connectSse() {
+  if (sseSource) return
+
+  const token = localStorage.getItem('ct_token')
+  const base = resolveSseBase()
+  const url = token
+    ? `${base}/sse/events?token=${encodeURIComponent(token)}`
+    : `${base}/sse/events`
+
+  setConnectionState({ connecting: true, status: 'reconnecting', error: null })
+
+  try {
+    sseSource = new EventSource(url)
+  } catch (err) {
+    sseSource = null
+    connectSocketFallback()
+    return
+  }
+
+  sseSource.onopen = () => {
+    reconnectAttempts = 0
+    setConnectionState({ connected: true, connecting: false, status: 'live', source: 'sse', error: null })
+  }
+
+  sseSource.onmessage = (event) => {
+    try {
+      const payload = JSON.parse(event.data)
+      ingestEvent(payload)
+    } catch {
+      // Ignore malformed frames
+    }
+  }
+
+  sseSource.onerror = () => {
+    if (sseSource) {
+      sseSource.close()
+      sseSource = null
+    }
+
+    reconnectAttempts += 1
+    setConnectionState({ connected: false, connecting: true, status: 'reconnecting', source: 'none', error: 'SSE disconnected' })
+
+    const waitMs = Math.min(10000, 1000 * Math.max(1, reconnectAttempts))
+    if (reconnectTimer) clearTimeout(reconnectTimer)
+
+    reconnectTimer = setTimeout(() => {
+      connectSse()
+      if (reconnectAttempts >= 3) {
+        connectSocketFallback()
+      }
+    }, waitMs)
+  }
+}
+
+function disconnectAll() {
+  if (sseSource) {
+    sseSource.close()
+    sseSource = null
+  }
+
+  if (socketRef) {
+    socketRef.disconnect()
+    socketRef = null
+  }
+
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
+}
+
 export default function useLiveEvents() {
-  const [events, setEvents] = useState([])
-  const [connecting, setConnecting] = useState(true)
-  const [connected, setConnected] = useState(false)
-  const [error, setError] = useState(null)
-  const socketRef = useRef(null)
-  const timeoutRef = useRef(null)
+  const [state, setState] = useState({ ...globalState })
 
   useEffect(() => {
-    // Get token from localStorage
-    const token = localStorage.getItem('ct_token')
+    const listener = (next) => setState(next)
+    subscribers.add(listener)
 
-    // Connect to Socket.io server
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
-    socketRef.current = io(apiBase, {
-      auth: {
-        token: token || '',
-      },
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: 5,
-    })
+    if (!sseSource && !socketRef) {
+      connectSse()
+    }
 
-    // ── Connection Handlers ──
-    socketRef.current.on('connect', () => {
-      setConnected(true)
-      setConnecting(false)
-      setError(null)
-      console.log('✅ Socket connected:', socketRef.current.id)
-    })
-
-    socketRef.current.on('disconnect', () => {
-      setConnected(false)
-      console.log('🔌 Socket disconnected')
-    })
-
-    socketRef.current.on('connect_error', (err) => {
-      setError(`Connection error: ${err.message}`)
-      console.error('Socket connection error:', err)
-    })
-
-    // ── Live Event Handler ──
-    socketRef.current.on('live_event', (eventPayload) => {
-      console.log('📡 Live event received:', eventPayload)
-      setEvents((prev) => [eventPayload, ...prev.slice(0, 99)])
-    })
-
-    socketRef.current.on('pong', () => {
-      console.log('🏓 Pong')
-    })
-
-    // Cleanup on unmount
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect()
-      }
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
+      subscribers.delete(listener)
+      if (subscribers.size === 0) {
+        disconnectAll()
       }
     }
   }, [])
 
-  // ── Join case-specific room ──
   const joinCase = (caseId) => {
-    if (socketRef.current && connected) {
-      socketRef.current.emit('join_case', caseId)
-      console.log(`📍 Joined case room: ${caseId}`)
+    if (socketRef?.connected && caseId) {
+      socketRef.emit('join_case', caseId)
     }
   }
 
-  // ── Leave case room ──
   const leaveCase = (caseId) => {
-    if (socketRef.current && connected) {
-      socketRef.current.emit('leave_case', caseId)
-      console.log(`📍 Left case room: ${caseId}`)
+    if (socketRef?.connected && caseId) {
+      socketRef.emit('leave_case', caseId)
     }
   }
 
-  // ── Heartbeat to keep connection alive ──
-  const sendPing = () => {
-    if (socketRef.current && connected) {
-      socketRef.current.emit('ping')
-    }
+  const setEvents = (updater) => {
+    globalState.events = typeof updater === 'function' ? updater(globalState.events) : updater
+    notify()
   }
 
   return {
-    events,
+    events: state.events,
     setEvents,
-    connecting,
-    connected,
-    error,
+    connecting: state.connecting,
+    connected: state.connected,
+    status: state.status,
+    source: state.source,
+    error: state.error,
+    pulseAt: state.pulseAt,
     joinCase,
     leaveCase,
-    sendPing,
-    socket: socketRef.current,
+    socket: socketRef,
   }
 }

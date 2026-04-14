@@ -3,6 +3,7 @@
 // ============================================================
 const { getRedisSubscriber } = require('../config/redis');
 const logger = require('../utils/logger');
+const { broadcastEvent } = require('./sseBroker');
 
 let subscriberInstance = null;
 
@@ -21,7 +22,7 @@ function initializeRedisSubscriber(io) {
   try {
     // Use the dedicated subscriber connection
     const redis = getRedisSubscriber();
-    
+
     // Note: ioredis automatically handles blocking mode for pub/sub
     // We'll use a simple event listener pattern
 
@@ -48,41 +49,49 @@ function initializeRedisSubscriber(io) {
  */
 function forwardEventToClients(io, eventPayloadJson) {
   try {
-    const event = JSON.parse(eventPayloadJson);
+    const parsed = JSON.parse(eventPayloadJson);
 
-    // Emit to all connected sockets (Socket.io handles filtering)
-    const eventObj = {
-      _id: event._id,
-      caseId: event.caseId,
-      type: event.type,
-      message: event.message,
-      metadata: event.metadata,
-      createdBy: event.createdBy,
-      rolesVisibleTo: event.rolesVisibleTo,
-      usersVisibleTo: event.usersVisibleTo,
-      createdAt: event.createdAt,
+    const inner = parsed?.data && parsed.data.payload !== undefined ? parsed.data : parsed;
+    const payload = inner?.payload && typeof inner.payload === 'object' ? inner.payload : (parsed.payload || parsed.data || parsed);
+
+    const realtimeEvent = {
+      type: inner.type || parsed.type || 'CASE_UPDATE',
+      caseId: inner.caseId || parsed.caseId || payload?.caseId || null,
+      payload,
+      timestamp: inner.timestamp || parsed.timestamp || Date.now(),
     };
 
-    // Broadcast to specific case room
-    if (event.caseId) {
-      io.to(`case_${event.caseId}`).emit('live_event', eventObj);
+    const eventObj = {
+      caseId: realtimeEvent.caseId,
+      type: realtimeEvent.type,
+      payload: realtimeEvent.payload,
+      timestamp: realtimeEvent.timestamp,
+      createdAt: new Date(realtimeEvent.timestamp).toISOString(),
+      message: realtimeEvent.payload?.message || realtimeEvent.payload?.summary || realtimeEvent.type,
+      rolesVisibleTo: realtimeEvent.payload?.rolesVisibleTo || [],
+      usersVisibleTo: realtimeEvent.payload?.usersVisibleTo || [],
+    };
+
+    if (eventObj.caseId) {
+      io.to(`case_${eventObj.caseId}`).emit('live_event', eventObj);
     }
 
-    // Broadcast to role-based rooms
-    if (event.rolesVisibleTo && Array.isArray(event.rolesVisibleTo)) {
-      event.rolesVisibleTo.forEach(role => {
+    if (eventObj.rolesVisibleTo.length) {
+      eventObj.rolesVisibleTo.forEach((role) => {
         io.to(`role_${role}`).emit('live_event', eventObj);
       });
+    } else {
+      io.emit('live_event', eventObj);
     }
 
-    // Broadcast to specific user rooms
-    if (event.usersVisibleTo && Array.isArray(event.usersVisibleTo)) {
-      event.usersVisibleTo.forEach(userId => {
+    if (eventObj.usersVisibleTo.length) {
+      eventObj.usersVisibleTo.forEach((userId) => {
         io.to(`user_${userId}`).emit('live_event', eventObj);
       });
     }
 
-    logger.debug(`📡 Event forwarded via Socket.io: ${event.type}`);
+    broadcastEvent(realtimeEvent);
+    logger.debug(`📡 Event forwarded via Socket.io + SSE: ${eventObj.type}`);
   } catch (err) {
     logger.error(`❌ Failed to forward event to clients: ${err.message}`);
   }
@@ -95,20 +104,21 @@ function forwardEventToClients(io, eventPayloadJson) {
 function startListening(io) {
   try {
     const redis = getRedisSubscriber();  // Use dedicated subscriber connection
+    const channels = ['case_updates', 'delay_alerts', 'leaderboard_updates'];
 
     // Subscribe to channel and listen for messages
     redis.on('message', (channel, message) => {
-      if (channel === 'case_updates') {
+      if (channels.includes(channel)) {
         forwardEventToClients(io, message);
       }
     });
 
-    // Subscribe to the channel
-    redis.subscribe('case_updates', (err) => {
+    // Subscribe to core realtime channels
+    redis.subscribe(...channels, (err) => {
       if (err) {
-        logger.error(`❌ Failed to subscribe to case_updates: ${err.message}`);
+        logger.error(`❌ Failed to subscribe to realtime channels: ${err.message}`);
       } else {
-        logger.info('✅ Subscribed to case_updates Redis channel');
+        logger.info(`✅ Subscribed to Redis channels: ${channels.join(', ')}`);
       }
     });
   } catch (err) {

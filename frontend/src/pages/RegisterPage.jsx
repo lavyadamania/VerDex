@@ -95,6 +95,8 @@ function RegisterPage() {
                             >
                                 <option value="victim">Victim</option>
                                 <option value="advocate">Advocate</option>
+                                <option value="court_staff">Court Staff</option>
+                                <option value="admin">Admin</option>
                                 <option value="visitor">Visitor</option>
                             </select>
                         </div>

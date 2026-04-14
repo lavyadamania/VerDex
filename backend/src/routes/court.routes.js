@@ -41,49 +41,7 @@ router.get('/', async (req, res, next) => {
 // ============================================================
 // GET /api/courts/:id — Court details with case stats
 // ============================================================
-router.get('/:id', async (req, res, next) => {
-  try {
-    const court = await Court.findById(req.params.id).lean({ virtuals: true });
-    if (!court) {
-      throw new AppError('Court not found', 404);
-    }
-
-    // Get case breakdown for this court
-    const [casesByStatus, casesByType, recentCases] = await Promise.all([
-      Case.aggregate([
-        { $match: { court: court._id } },
-        { $group: { _id: '$current_status', count: { $sum: 1 } } },
-      ]),
-      Case.aggregate([
-        { $match: { court: court._id } },
-        { $group: { _id: '$case_type', count: { $sum: 1 } } },
-      ]),
-      Case.find({ court: court._id })
-        .select('cnr_number case_type current_status delay_risk_score filing_date')
-        .sort({ last_update: -1 })
-        .limit(5)
-        .lean(),
-    ]);
-
-    res.json({
-      success: true,
-      data: {
-        court,
-        stats: {
-          by_status: casesByStatus.reduce((a, s) => ({ ...a, [s._id]: s.count }), {}),
-          by_type: casesByType.reduce((a, t) => ({ ...a, [t._id]: t.count }), {}),
-        },
-        recent_cases: recentCases,
-      },
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// ============================================================
-// GET /api/courts/leaderboard — Court performance ranking
-// ============================================================
+// NOTE: Keep specific routes before '/:id' to avoid shadowing.
 router.get('/leaderboard/rank', async (req, res, next) => {
   try {
     const courts = await Court.find()
@@ -118,6 +76,49 @@ router.get('/leaderboard/rank', async (req, res, next) => {
       data: {
         total_courts: ranked.length,
         leaderboard: ranked,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ============================================================
+// GET /api/courts/:id — Court details with case stats
+// ============================================================
+router.get('/:id', async (req, res, next) => {
+  try {
+    const court = await Court.findById(req.params.id).lean({ virtuals: true });
+    if (!court) {
+      throw new AppError('Court not found', 404);
+    }
+
+    // Get case breakdown for this court
+    const [casesByStatus, casesByType, recentCases] = await Promise.all([
+      Case.aggregate([
+        { $match: { court: court._id } },
+        { $group: { _id: '$current_status', count: { $sum: 1 } } },
+      ]),
+      Case.aggregate([
+        { $match: { court: court._id } },
+        { $group: { _id: '$case_type', count: { $sum: 1 } } },
+      ]),
+      Case.find({ court: court._id })
+        .select('cnr_number case_type current_status delay_risk_score filing_date')
+        .sort({ last_update: -1 })
+        .limit(5)
+        .lean(),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        court,
+        stats: {
+          by_status: casesByStatus.reduce((a, s) => ({ ...a, [s._id]: s.count }), {}),
+          by_type: casesByType.reduce((a, t) => ({ ...a, [t._id]: t.count }), {}),
+        },
+        recent_cases: recentCases,
       },
     });
   } catch (err) {

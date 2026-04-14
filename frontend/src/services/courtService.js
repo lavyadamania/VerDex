@@ -12,7 +12,7 @@ const courtService = {
     },
 
     async getLeaderboard() {
-        const res = await api.get('/courts/leaderboard/rank')
+        const res = await api.get('/leaderboard')
         return res.data?.data
     },
 }

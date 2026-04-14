@@ -13,7 +13,7 @@ const Case = require('../models/Case');
 const DisclosureRequest = require('../models/DisclosureRequest');
 const { createAuditEntry } = require('../middleware/audit');
 const logger = require('../utils/logger');
-const { publishToUser } = require('./eventPublisher');
+const { publishToUser, publishRealtimeEvent } = require('./eventPublisher');
 
 // Fields that CAN be disclosed (whitelist)
 const DISCLOSABLE_FIELDS = [
@@ -234,7 +234,16 @@ async function reviewDisclosureRequest({ requestId, adminId, decision, notes, au
     decision,
     caseId: request.case,
     notes: notes || '',
-  }).catch(() => {}); // Fire-and-forget
+  }).catch(() => { }); // Fire-and-forget
+
+  publishRealtimeEvent('DISCLOSURE_UPDATE', request.case, {
+    requestId: request._id,
+    decision,
+    notes: notes || '',
+    rolesVisibleTo: ['admin', 'court_staff', 'victim'],
+    usersVisibleTo: [request.requested_by],
+    message: `Disclosure request ${request._id} ${decision}`,
+  }).catch(() => { });
 
   return { request, caseUpdated };
 }
@@ -304,7 +313,16 @@ async function revokeDisclosure({ requestId, userId, auditInfo = {} }) {
     action: 'revoked',
     caseId: request.case,
     removedFields: request.requested_fields,
-  }).catch(() => {}); // Fire-and-forget
+  }).catch(() => { }); // Fire-and-forget
+
+  publishRealtimeEvent('DISCLOSURE_UPDATE', request.case, {
+    requestId: request._id,
+    action: 'revoked',
+    removedFields: request.requested_fields,
+    rolesVisibleTo: ['admin', 'court_staff', 'victim'],
+    usersVisibleTo: [userId],
+    message: `Disclosure revoked for request ${request._id}`,
+  }).catch(() => { });
 
   return {
     request,

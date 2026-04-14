@@ -23,7 +23,7 @@ const registerSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
   phone: z.string().optional(),
-  role: z.enum(['victim', 'advocate', 'visitor']).default('victim'),
+  role: z.enum(['victim', 'advocate', 'visitor', 'court_staff', 'admin']).default('victim'),
 });
 
 const loginSchema = z.object({

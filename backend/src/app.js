@@ -17,6 +17,7 @@ const { startDelayDetectionScheduler, stopDelayDetectionScheduler } = require('.
 const { startHearingReminderScheduler, stopHearingReminderScheduler } = require('./workers/hearingReminder');
 const { startLeaderboardRefreshScheduler, stopLeaderboardRefreshScheduler } = require('./workers/leaderboardRefresh');
 const { startAIWorker, stopAIWorker } = require('./workers/aiProcessing');
+const { startRealtimeDemoActivity, stopRealtimeDemoActivity } = require('./workers/realtimeDemoActivity');
 const aiService = require('./services/aiService');
 
 // ── Create Express app ──
@@ -268,7 +269,7 @@ async function startServer() {
     // ── Initialize Socket.io for Real-Time Events ──
     const { initializeSocketServer } = require('./sockets/socketServer');
     const { initializeRedisSubscriber, startListening } = require('./services/redisSubscriber');
-    
+
     try {
       const io = initializeSocketServer(server);
       initializeRedisSubscriber(io);
@@ -291,6 +292,12 @@ async function startServer() {
     startAIWorker().catch(err => {
       logger.error({ err }, 'Failed to start AI processing worker');
     });
+
+    if (process.env.ENABLE_REALTIME_DEMO === 'true') {
+      startRealtimeDemoActivity().catch(err => {
+        logger.error({ err }, 'Failed to start realtime demo activity worker');
+      });
+    }
   });
 
   // ── Graceful Shutdown ──
@@ -302,6 +309,7 @@ async function startServer() {
       await stopHearingReminderScheduler();
       await stopLeaderboardRefreshScheduler();
       await stopAIWorker();
+      await stopRealtimeDemoActivity();
       await disconnectRedis();
       await closeDB();
       logger.info('Goodbye! [GOODBYE]');

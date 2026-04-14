@@ -365,6 +365,25 @@ router.put('/:id', authenticate, denyVisitor, validate(updateCaseSchema), async 
     // ── Redis Cache Sync ──
     await syncCaseToRedis(caseDoc);
 
+    // ── Emit Real-Time Event ──
+    try {
+      await emitCaseEvent({
+        caseId: caseDoc._id,
+        type: 'STATUS_UPDATE',
+        message: `Case ${caseDoc.cnr_number} updated`,
+        createdBy: req.user._id,
+        metadata: {
+          caseNumber: caseDoc.cnr_number,
+          caseTitle: caseDoc.case_title,
+          updatedFields: Object.keys(req.body),
+        },
+        rolesVisibleTo: ['admin', 'court_staff', 'advocate', 'victim'],
+        usersVisibleTo: caseDoc.victim_user ? [caseDoc.victim_user] : [],
+      });
+    } catch (eventErr) {
+      logger.warn(`Failed to emit case update event: ${eventErr.message}`);
+    }
+
     // Audit
     await createAuditEntry({
       userId: req.user._id,

@@ -17,6 +17,7 @@ const { getRedis } = require('../config/redis');
 const logger = require('../utils/logger');
 const { computeDelayRisk } = require('../utils/delayRisk');
 const { updateCourtMapData, invalidateMapCache } = require('./courtMapService');
+const { publishRealtimeEvent } = require('./eventPublisher');
 
 // Redis key constants
 const REDIS_KEYS = {
@@ -322,6 +323,14 @@ async function computeLeaderboard() {
     logger.info(`     Top court:      ${systemStats.top_court}`);
     logger.info(`     ⏱️  Time:        ${elapsed}s`);
     logger.info('═══════════════════════════════════════════════════');
+
+    await publishRealtimeEvent('LEADERBOARD_UPDATE', null, {
+      courtsRanked: courtMetrics.length,
+      topCourt: systemStats.top_court,
+      avgJsi: systemStats.avg_jsi,
+      rolesVisibleTo: ['visitor', 'victim', 'advocate', 'court_staff', 'admin'],
+      message: 'Leaderboard metrics refreshed',
+    });
 
     return { courts: courtMetrics, systemStats, elapsed: parseFloat(elapsed) };
   } catch (err) {

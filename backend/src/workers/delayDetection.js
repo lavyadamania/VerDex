@@ -24,12 +24,13 @@ const Case = require('../models/Case');
 const Alert = require('../models/Alert');
 const { getRedis, isMemoryStore } = require('../config/redis');
 const { syncCaseToRedis } = require('../utils/caseCache');
+const { publishRealtimeEvent } = require('../services/eventPublisher');
 const logger = require('../utils/logger');
 
 // ── Thresholds (in days) ──
 const THRESHOLDS = {
-  WARNING:  { days: 30, minScore: 3, maxScore: 5, alertType: 'delay_warning',   severity: 'medium' },
-  HIGH:     { days: 60, minScore: 6, maxScore: 8, alertType: 'delay_high_risk', severity: 'high' },
+  WARNING: { days: 30, minScore: 3, maxScore: 5, alertType: 'delay_warning', severity: 'medium' },
+  HIGH: { days: 60, minScore: 6, maxScore: 8, alertType: 'delay_high_risk', severity: 'high' },
   CRITICAL: { days: 90, minScore: 9, maxScore: 10, alertType: 'delay_critical', severity: 'critical' },
 };
 
@@ -120,6 +121,18 @@ async function runDelayDetection() {
 
           // Sync to Redis
           await syncCaseToRedis({ ...c, ...updateData });
+
+          await publishRealtimeEvent('DELAY_ALERT', c._id, {
+            caseId: caseId,
+            caseNumber: c.cnr_number,
+            oldDelayRiskScore: oldScore,
+            delayRiskScore: risk.score,
+            delayLevel: risk.level,
+            daysSinceUpdate,
+            rolesVisibleTo: ['admin', 'court_staff', 'advocate', 'victim'],
+            usersVisibleTo: c.victim_user ? [c.victim_user] : [],
+            message: `Delay risk changed to ${risk.level} for case ${c.cnr_number}`,
+          });
         }
 
         // Add to Redis delay sets
