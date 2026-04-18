@@ -7,6 +7,7 @@
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
     "migrate": "node src/models/migrate.js",
+    "migrate:roles": "node src/scripts/migrateVictimToUser.js",
     "seed": "node src/models/seed.js",
     "seed:geo": "node src/seeds/courtGeoSeed.js",
     "seed:demo": "node src/seeds/demoDataSeed.js"

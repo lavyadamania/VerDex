@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { io } from 'socket.io-client'
 
 const MAX_EVENTS = 200
@@ -124,7 +124,7 @@ function connectSse() {
 
   try {
     sseSource = new EventSource(url)
-  } catch (err) {
+  } catch {
     sseSource = null
     connectSocketFallback()
     return
@@ -201,22 +201,22 @@ export default function useLiveEvents() {
     }
   }, [])
 
-  const joinCase = (caseId) => {
+  const joinCase = useCallback((caseId) => {
     if (socketRef?.connected && caseId) {
       socketRef.emit('join_case', caseId)
     }
-  }
+  }, [])
 
-  const leaveCase = (caseId) => {
+  const leaveCase = useCallback((caseId) => {
     if (socketRef?.connected && caseId) {
       socketRef.emit('leave_case', caseId)
     }
-  }
+  }, [])
 
-  const setEvents = (updater) => {
+  const setEvents = useCallback((updater) => {
     globalState.events = typeof updater === 'function' ? updater(globalState.events) : updater
     notify()
-  }
+  }, [])
 
   return {
     events: state.events,

@@ -26,7 +26,7 @@ function LandingPage() {
                         Trusted, data-driven visibility into case progress, delay risks, and court performance.
                     </h2>
                     <p className="mt-5 max-w-3xl text-base text-slate-600 dark:text-slate-300">
-                        A professional platform for victims, the public, and court administrators to monitor justice delivery through verified records and real-time operational metrics.
+                        A professional platform for users, the public, and court administrators to monitor justice delivery through verified records and real-time operational metrics.
                     </p>
                     <div className="mt-8 flex flex-wrap items-center gap-3">
                         <Link to="/register" className="inline-flex items-center gap-2 rounded-lg bg-brand-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-900">
@@ -42,7 +42,7 @@ function LandingPage() {
                 <section className="mt-8 grid gap-4 md:grid-cols-3">
                     <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-panel dark:border-slate-800 dark:bg-slate-900">
                         <ShieldCheck className="h-5 w-5 text-brand-700 dark:text-brand-100" />
-                        <h3 className="mt-3 text-lg font-semibold">Victim-Centered Privacy</h3>
+                        <h3 className="mt-3 text-lg font-semibold">User-Centered Privacy</h3>
                         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Role-based access and controlled disclosure ensure sensitive data remains protected.</p>
                     </article>
                     <article className="rounded-xl border border-slate-200 bg-white p-6 shadow-panel dark:border-slate-800 dark:bg-slate-900">
@@ -59,10 +59,10 @@ function LandingPage() {
 
                 <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-panel dark:border-slate-800 dark:bg-slate-900 lg:p-8">
                     <h3 className="text-lg font-semibold">Choose Your Portal</h3>
-                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Access dedicated experiences tailored for victims, advocates, and public observers.</p>
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Access dedicated experiences tailored for users, advocates, and public observers.</p>
                     <div className="mt-5 grid gap-3 md:grid-cols-3">
-                        <Link to="/dashboard/victim" className="rounded-lg border border-slate-300 px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
-                            Victim Portal
+                        <Link to="/dashboard/user" className="rounded-lg border border-slate-300 px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
+                            User Portal
                         </Link>
                         <Link to="/dashboard/advocate" className="rounded-lg border border-slate-300 px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
                             Advocate Portal

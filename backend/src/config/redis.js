@@ -87,25 +87,50 @@ async function connectRedis() {
     }
 
     const pong = await new Promise((resolve, reject) => {
+      const onReady = async () => {
+        cleanup();
+        try {
+          resolve(await client.ping());
+        } catch (e) {
+          reject(e);
+        }
+      };
+
+      const onError = (err) => {
+        cleanup();
+        try { client.disconnect(); } catch (_) {}
+        reject(err);
+      };
+
       const timeout = setTimeout(() => {
-        client.disconnect();
+        cleanup();
+        try { client.disconnect(); } catch (_) {}
         reject(new Error('Redis connection timeout'));
       }, 5000);
 
-      client.on('ready', async () => {
+      const cleanup = () => {
         clearTimeout(timeout);
-        try { resolve(await client.ping()); } catch (e) { reject(e); }
-      });
+        client.off('ready', onReady);
+        client.off('error', onError);
+      };
 
-      client.on('error', (err) => {
-        clearTimeout(timeout);
-        client.disconnect();
-        reject(err);
-      });
+      client.once('ready', onReady);
+      client.once('error', onError);
     });
 
     if (pong === 'PONG') {
       redis = client;
+
+      // Runtime listeners should log connection state but must not force-close the client.
+      redis.on('error', (err) => {
+        logger.warn(`[WARNING] Redis runtime error: ${err.message}`);
+      });
+      redis.on('end', () => {
+        logger.warn('[WARNING] Redis connection ended');
+      });
+      redis.on('reconnecting', () => {
+        logger.info('Redis reconnecting...');
+      });
       
       // Create a SEPARATE subscriber connection
       try {
@@ -127,6 +152,12 @@ async function connectRedis() {
         }
         
         redisSubscriber = subscriberClient;
+        redisSubscriber.on('error', (err) => {
+          logger.warn(`[WARNING] Redis subscriber runtime error: ${err.message}`);
+        });
+        redisSubscriber.on('end', () => {
+          logger.warn('[WARNING] Redis subscriber connection ended');
+        });
         logger.info('[SUCCESS] Redis subscriber connection created (separate for pub/sub)');
       } catch (subErr) {
         logger.warn(`[WARNING] Failed to create subscriber connection: ${subErr.message}`);

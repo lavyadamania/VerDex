@@ -7,6 +7,7 @@ const router = express.Router();
 const { authenticate, optionalAuth } = require('../middleware/auth');
 const { AppError } = require('../middleware/errorHandler');
 const { getVisibleEvents, getCaseEvents } = require('../services/eventService');
+const { expandRoleAliases, isCaseOwnerRole } = require('../utils/roles');
 const logger = require('../utils/logger');
 
 // ============================================================
@@ -53,7 +54,7 @@ router.get('/case/:caseId', authenticate, async (req, res, next) => {
 
     // Access check
     const { role } = req.user;
-    if (role === 'victim' && caseDoc.victim_user?.toString() !== req.user._id.toString()) {
+    if (isCaseOwnerRole(role) && caseDoc.victim_user?.toString() !== req.user._id.toString()) {
       throw new AppError('Access denied. You can only view events for your own cases.', 403);
     }
 
@@ -80,11 +81,12 @@ router.get('/stats', authenticate, async (req, res, next) => {
   try {
     const Event = require('../models/Event');
     const { _id: userId, role } = req.user;
+    const visibleRoles = expandRoleAliases(role);
 
     // Get events visible to user
     const query = {
       $or: [
-        { rolesVisibleTo: role },
+        { rolesVisibleTo: { $in: visibleRoles } },
         { usersVisibleTo: userId },
       ],
     };

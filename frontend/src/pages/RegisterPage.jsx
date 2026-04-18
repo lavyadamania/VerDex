@@ -8,7 +8,7 @@ function RegisterPage() {
         email: '',
         phone: '',
         password: '',
-        role: 'victim',
+        role: 'user',
     })
     const [error, setError] = useState('')
     const [success, setSuccess] = useState('')
@@ -93,7 +93,7 @@ function RegisterPage() {
                                 value={form.role}
                                 onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value }))}
                             >
-                                <option value="victim">Victim</option>
+                                <option value="user">User</option>
                                 <option value="advocate">Advocate</option>
                                 <option value="court_staff">Court Staff</option>
                                 <option value="admin">Admin</option>

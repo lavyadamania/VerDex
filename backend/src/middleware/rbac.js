@@ -19,6 +19,7 @@
 // └──────────────┴───────┴────────────┴────────┴──────────┴─────────┘
 // ============================================================
 const { AppError } = require('./errorHandler');
+const { hasRole } = require('../utils/roles');
 
 /**
  * Middleware: Restrict access to specific roles.
@@ -34,7 +35,7 @@ function authorize(...roles) {
       return next(new AppError('Authentication required', 401));
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!hasRole(req.user.role, ...roles)) {
       return next(
         new AppError(
           `Access denied. Required role: ${roles.join(' or ')}. Your role: ${req.user.role}`,
@@ -80,7 +81,7 @@ function denyVisitor(req, res, next) {
   if (req.user && req.user.role === 'visitor') {
     return next(
       new AppError(
-        'This feature is not available for visitor accounts. Please register as a victim or advocate.',
+          'This feature is not available for visitor accounts. Please register as a user or advocate.',
         403
       )
     );
@@ -111,7 +112,7 @@ function requireVerification(minLevel = 'otp_verified') {
     // Visitors don't go through verification flow
     if (req.user.role === 'visitor') {
       return next(
-        new AppError('Visitors cannot access verified-only features. Please register as a victim or advocate.', 403)
+        new AppError('Visitors cannot access verified-only features. Please register as a user or advocate.', 403)
       );
     }
 

@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const env = require('../config/env');
 const User = require('../models/User');
 const { AppError } = require('./errorHandler');
+const { normalizeRole } = require('../utils/roles');
 
 /**
  * Middleware: Verify JWT token from Authorization header.
@@ -42,6 +43,7 @@ async function authenticate(req, res, next) {
     }
 
     // Attach user to request
+    user.role = normalizeRole(user.role);
     req.user = user;
     req.userId = user._id;
     next();
@@ -66,6 +68,7 @@ async function optionalAuth(req, res, next) {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, env.JWT_SECRET);
     const user = await User.findById(decoded.userId).select('-password_hash');
+    if (user) user.role = normalizeRole(user.role);
     req.user = user;
     req.userId = user ? user._id : null;
   } catch {

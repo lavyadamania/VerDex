@@ -6,6 +6,13 @@ const publicService = {
         return res.data?.data
     },
 
+    async searchCaseByCnr(cnr) {
+        const res = await api.get('/public/cases/search/by-cnr', {
+            params: { cnr },
+        })
+        return res.data?.data
+    },
+
     async getCaseByMaskedId(maskedId) {
         const res = await api.get(`/public/cases/${maskedId}`)
         return res.data?.data

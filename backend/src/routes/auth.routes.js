@@ -13,6 +13,7 @@ const { getRedis } = require('../config/redis');
 const { validate } = require('../middleware/validator');
 const { authenticate } = require('../middleware/auth');
 const { AppError } = require('../middleware/errorHandler');
+const { normalizeRole } = require('../utils/roles');
 const logger = require('../utils/logger');
 
 // ============================================================
@@ -23,7 +24,7 @@ const registerSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
   phone: z.string().optional(),
-  role: z.enum(['victim', 'advocate', 'visitor', 'court_staff', 'admin']).default('victim'),
+  role: z.enum(['user', 'victim', 'advocate', 'visitor', 'court_staff', 'admin']).default('user'),
 });
 
 const loginSchema = z.object({
@@ -40,7 +41,7 @@ const otpSchema = z.object({
 // ============================================================
 function generateToken(userId, role) {
   return jwt.sign(
-    { userId, role },
+    { userId, role: normalizeRole(role) },
     env.JWT_SECRET,
     { expiresIn: env.JWT_EXPIRES_IN }
   );
@@ -67,6 +68,7 @@ function generateOTP() {
 router.post('/register', validate(registerSchema), async (req, res, next) => {
   try {
     const { email, password, full_name, phone, role } = req.body;
+    const normalizedRole = normalizeRole(role);
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
@@ -83,7 +85,7 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
       password_hash,
       full_name,
       phone,
-      role,
+      role: normalizedRole,
       verification_status: 'unverified',
     });
 
@@ -109,7 +111,7 @@ router.post('/register', validate(registerSchema), async (req, res, next) => {
         user_id: user._id,
         email: user.email,
         full_name: user.full_name,
-        role: user.role,
+        role: normalizeRole(user.role),
         verification_status: user.verification_status,
         otp_hint: env.isDev ? `DEV MODE: OTP is ${otp}` : undefined,
       },
@@ -254,7 +256,7 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
     user.last_login = new Date();
     await user.save();
 
-    logger.info(`🔑 User logged in: ${user.email} (${user.role})`);
+    logger.info(`🔑 User logged in: ${user.email} (${normalizeRole(user.role)})`);
 
     res.json({
       success: true,
@@ -266,7 +268,7 @@ router.post('/login', validate(loginSchema), async (req, res, next) => {
           _id: user._id,
           email: user.email,
           full_name: user.full_name,
-          role: user.role,
+          role: normalizeRole(user.role),
           verification_status: user.verification_status,
         },
       },

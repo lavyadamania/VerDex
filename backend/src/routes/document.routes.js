@@ -19,6 +19,7 @@ const { auditMiddleware, createAuditEntry } = require('../middleware/audit');
 const { uploadLimiter } = require('../middleware/rateLimiter');
 const { AppError } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
+const { isCaseOwnerRole } = require('../utils/roles');
 const { getFileReference, resolveFilePath, deleteFile, UPLOAD_BASE } = require('../utils/storageService');
 const { emitCaseEvent } = require('../services/eventService');
 
@@ -77,7 +78,7 @@ router.post('/:caseId/upload', authenticate, denyVisitor, uploadLimiter, upload.
     }
 
     // Ownership check for victims
-    if (req.user.role === 'victim' && caseDoc.victim_user?.toString() !== req.user._id.toString()) {
+    if (isCaseOwnerRole(req.user.role) && caseDoc.victim_user?.toString() !== req.user._id.toString()) {
       fs.unlinkSync(req.file.path);
       throw new AppError('You can only upload documents to your own cases.', 403);
     }
@@ -117,7 +118,7 @@ router.post('/:caseId/upload', authenticate, denyVisitor, uploadLimiter, upload.
           docType: doc_type,
           fileName: req.file.originalname,
         },
-        rolesVisibleTo: ['admin', 'court_staff', 'advocate', 'victim'],
+        rolesVisibleTo: ['admin', 'court_staff', 'advocate', 'user', 'victim'],
         usersVisibleTo: caseDoc.victim_user ? [caseDoc.victim_user] : [],
       });
     } catch (eventErr) {
@@ -175,7 +176,7 @@ router.get('/:caseId', authenticate, readOnlyForVisitor, async (req, res, next) 
     }
 
     // Victims can only see documents from their own cases
-    if (req.user.role === 'victim' && caseDoc.victim_user?.toString() !== req.user._id.toString()) {
+    if (isCaseOwnerRole(req.user.role) && caseDoc.victim_user?.toString() !== req.user._id.toString()) {
       throw new AppError('You can only view documents for your own cases.', 403);
     }
 
@@ -226,7 +227,7 @@ router.get('/download/:docId', authenticate, async (req, res, next) => {
     }
 
     // Victims can only download documents from their own cases
-    if (req.user.role === 'victim') {
+    if (isCaseOwnerRole(req.user.role)) {
       const caseDoc = await Case.findById(doc.case);
       if (caseDoc && caseDoc.victim_user?.toString() !== req.user._id.toString()) {
         throw new AppError('You can only download documents from your own cases.', 403);

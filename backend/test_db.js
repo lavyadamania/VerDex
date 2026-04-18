@@ -1,12 +1,10 @@
 const mongoose = require('mongoose');
 const dns = require('dns');
+const env = require('./src/config/env');
 
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
-const uris = [
-  'mongodb+srv://verdex_db:verdex123@cluster0.64flr9x.mongodb.net/court_transparency?retryWrites=true&w=majority',
-  'mongodb+srv://verdex_db:no_sqlpass123@cluster0.64flr9x.mongodb.net/court_transparency?retryWrites=true&w=majority'
-];
+const uris = [env.MONGO_URI].filter(Boolean);
 
 async function test() {
   for (const uri of uris) {

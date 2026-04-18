@@ -135,7 +135,7 @@ function AdminDashboardPage() {
         return () => {
             mounted = false
         }
-    }, [])
+    }, [user?.role])
 
     useEffect(() => {
         const latest = events[0]
@@ -183,7 +183,7 @@ function AdminDashboardPage() {
         }
 
         runTargetedRefresh()
-    }, [pulseAt])
+    }, [pulseAt, events, user?.role])
 
     const chartData = useMemo(() => {
         if (!summary) return []

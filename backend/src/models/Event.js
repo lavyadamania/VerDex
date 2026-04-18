@@ -49,7 +49,7 @@ const eventSchema = new mongoose.Schema({
   // Visibility Rules
   rolesVisibleTo: {
     type: [String],
-    enum: ['victim', 'advocate', 'admin', 'court_staff', 'visitor'],
+    enum: ['user', 'victim', 'advocate', 'admin', 'court_staff', 'visitor'],
     default: ['admin', 'court_staff'],
   },
   usersVisibleTo: {

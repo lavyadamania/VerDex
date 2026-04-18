@@ -32,27 +32,49 @@ function customLookup(hostname, options, callback) {
   });
 }
 
-const MONGO_URI = env.MONGO_URI || 'mongodb://localhost:27017/court_transparency';
+const PRIMARY_MONGO_URI = env.MONGO_URI || 'mongodb://localhost:27017/court_transparency';
+const FALLBACK_MONGO_URI = process.env.MONGO_FALLBACK_URI || 'mongodb://127.0.0.1:27017/court_transparency';
+
+async function connectWithUri(uri) {
+  const isAtlas = uri.includes('mongodb.net');
+  const options = {
+    connectTimeoutMS: 20000,
+    socketTimeoutMS: 45000,
+    ...(isAtlas ? { family: 4, lookup: customLookup } : {}),
+  };
+
+  logger.info(`[SYSTEM] Attempting MongoDB connection (${isAtlas ? 'Atlas' : 'local/standard'})...`);
+  await mongoose.connect(uri, options);
+  logger.info(`[SUCCESS] MongoDB connected -- ${uri.replace(/\/\/.*@/, '//***@')}`);
+}
 
 async function connectDB() {
   try {
-    const isAtlas = MONGO_URI.includes('mongodb.net');
-    const options = {
-      connectTimeoutMS: 20000,
-      socketTimeoutMS: 45000,
-      family: 4, // Force IPv4
-      lookup: customLookup, // Force our Google DNS resolver
-    };
-    logger.info(`[SYSTEM] Attempting MongoDB connection (${isAtlas ? 'Atlas' : 'local/standard'})...`);
-    await mongoose.connect(MONGO_URI, options);
-    logger.info(`[SUCCESS] MongoDB connected -- ${MONGO_URI.replace(/\/\/.*@/, '//***@')}`);
+    await connectWithUri(PRIMARY_MONGO_URI);
     return true;
-  } catch (err) {
+  } catch (primaryErr) {
+    const primaryIsAtlas = PRIMARY_MONGO_URI.includes('mongodb.net');
+    const shouldTryFallback = primaryIsAtlas && FALLBACK_MONGO_URI && FALLBACK_MONGO_URI !== PRIMARY_MONGO_URI;
+
+    if (shouldTryFallback) {
+      logger.warn(`[WARNING] Primary MongoDB connection failed (${primaryErr.message}). Trying fallback URI...`);
+      try {
+        await connectWithUri(FALLBACK_MONGO_URI);
+        return true;
+      } catch (fallbackErr) {
+        logger.error({
+          primaryError: primaryErr.message,
+          fallbackError: fallbackErr.message,
+        }, '[ERROR] MongoDB primary and fallback connections failed');
+        return false;
+      }
+    }
+
     logger.error({ 
-      message: err.message,
-      code: err.code,
-      name: err.name,
-      stack: err.stack 
+      message: primaryErr.message,
+      code: primaryErr.code,
+      name: primaryErr.name,
+      stack: primaryErr.stack 
     }, '[ERROR] MongoDB connection failed');
     return false;
   }

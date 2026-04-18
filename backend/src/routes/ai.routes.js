@@ -11,6 +11,7 @@ const aiService = require('../services/aiService');
 const { enqueueAIJob, getQueueStatus, processAIJob } = require('../workers/aiProcessing');
 const Document = require('../models/Document');
 const Case = require('../models/Case');
+const { isCaseOwnerRole } = require('../utils/roles');
 const logger = require('../utils/logger');
 
 // ============================================================
@@ -52,7 +53,7 @@ router.post('/analyze/:documentId', authenticate, denyVisitor, async (req, res, 
       throw new AppError('Associated case not found', 404);
     }
 
-    if (req.user.role === 'victim' && caseDoc.victim_user?.toString() !== req.user._id.toString()) {
+    if (isCaseOwnerRole(req.user.role) && caseDoc.victim_user?.toString() !== req.user._id.toString()) {
       throw new AppError('You can only analyze documents from your own cases.', 403);
     }
 
@@ -134,7 +135,7 @@ router.post('/extract-text/:documentId', authenticate, denyVisitor, async (req, 
 
     // Ownership check
     const caseDoc = await Case.findById(document.case);
-    if (req.user.role === 'victim' && caseDoc?.victim_user?.toString() !== req.user._id.toString()) {
+    if (isCaseOwnerRole(req.user.role) && caseDoc?.victim_user?.toString() !== req.user._id.toString()) {
       throw new AppError('Access denied.', 403);
     }
 

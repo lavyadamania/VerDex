@@ -2,10 +2,15 @@ import { Link, useLocation } from 'react-router-dom'
 import { Activity, Building2, FileText, Globe2, LayoutDashboard, ShieldCheck } from 'lucide-react'
 import useAuth from '../hooks/useAuth'
 import LiveMonitoringCard from '../components/live/LiveMonitoringCard'
+import { normalizeRole } from '../utils/roles'
 
 const navByRole = {
+    user: [
+        { label: 'User Dashboard', to: '/dashboard/user', icon: LayoutDashboard },
+        { label: 'Public Dashboard', to: '/dashboard/public', icon: Globe2 },
+    ],
     victim: [
-        { label: 'Victim Dashboard', to: '/dashboard/victim', icon: LayoutDashboard },
+        { label: 'User Dashboard', to: '/dashboard/user', icon: LayoutDashboard },
         { label: 'Public Dashboard', to: '/dashboard/public', icon: Globe2 },
     ],
     advocate: [
@@ -26,7 +31,7 @@ const navByRole = {
 function Sidebar({ open, onClose }) {
     const { user } = useAuth()
     const location = useLocation()
-    const role = user?.role || 'public'
+    const role = normalizeRole(user?.role) || 'public'
     const items = navByRole[role] || navByRole.public
 
     return (

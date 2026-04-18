@@ -30,6 +30,7 @@ const { auditMiddleware, createAuditEntry } = require('../middleware/audit');
 const { AppError } = require('../middleware/errorHandler');
 const User = require('../models/User');
 const Document = require('../models/Document');
+const { isCaseOwnerRole } = require('../utils/roles');
 const logger = require('../utils/logger');
 const { getFileReference, UPLOAD_BASE } = require('../utils/storageService');
 const {
@@ -214,7 +215,7 @@ router.post('/upload-id/:caseId', authenticate, denyVisitor, uploadId.single('id
     }
 
     // Ownership check: victims can only upload to their own cases
-    if (req.user.role === 'victim' && caseDoc.victim_user?.toString() !== req.user._id.toString()) {
+    if (isCaseOwnerRole(req.user.role) && caseDoc.victim_user?.toString() !== req.user._id.toString()) {
       if (req.file?.path) fs.unlinkSync(req.file.path);
       throw new AppError('You can only upload ID proof to your own cases.', 403);
     }

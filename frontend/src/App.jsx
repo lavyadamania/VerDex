@@ -4,7 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
-import VictimDashboardPage from './pages/VictimDashboardPage'
+import UserDashboardPage from './pages/UserDashboardPage'
 import AdvocateDashboardPage from './pages/AdvocateDashboardPage'
 import PublicDashboardPage from './pages/PublicDashboardPage'
 import PublicCaseDetailPage from './pages/PublicCaseDetailPage'
@@ -21,10 +21,15 @@ function App() {
 
             <Route
                 path="/dashboard/victim"
+                element={<Navigate to="/dashboard/user" replace />}
+            />
+
+            <Route
+                path="/dashboard/user"
                 element={
-                    <ProtectedRoute allowedRoles={["victim"]}>
-                        <AppShell title="Victim Dashboard">
-                            <VictimDashboardPage />
+                    <ProtectedRoute allowedRoles={["user", "victim"]}>
+                        <AppShell title="User Dashboard">
+                            <UserDashboardPage />
                         </AppShell>
                     </ProtectedRoute>
                 }

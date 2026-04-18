@@ -22,6 +22,10 @@ const { getRedis } = require('../config/redis');
 const { REDIS_KEYS } = require('../services/leaderboardService');
 const logger = require('../utils/logger');
 
+function escapeRegex(value = '') {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 // ============================================================
 // GET /api/public/cases — Anonymized case listing
 // ============================================================
@@ -103,6 +107,53 @@ router.get('/cases', async (req, res, next) => {
         limit: limitNum,
         pages: Math.ceil(total / limitNum),
         cases: anonymized,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ============================================================
+// GET /api/public/cases/search/by-cnr?cnr=... — Exact CNR lookup
+// ============================================================
+// Returns anonymized case detail for a public case number search.
+// ============================================================
+router.get('/cases/search/by-cnr', async (req, res, next) => {
+  try {
+    const cnr = (req.query.cnr || '').trim();
+
+    if (!cnr) {
+      return res.status(400).json({
+        success: false,
+        error: 'Query parameter "cnr" is required',
+      });
+    }
+
+    const caseDoc = await Case.findOne({
+      cnr_number: {
+        $regex: `^${escapeRegex(cnr)}$`,
+        $options: 'i',
+      },
+    })
+      .populate('court', 'court_name district state court_type');
+
+    if (!caseDoc) {
+      return res.status(404).json({
+        success: false,
+        error: 'Case not found for the provided case number',
+      });
+    }
+
+    const anonymized = caseDoc.toAnonymized();
+
+    res.json({
+      success: true,
+      data: {
+        case: {
+          ...anonymized,
+          cnr_number: caseDoc.cnr_number,
+        },
       },
     });
   } catch (err) {

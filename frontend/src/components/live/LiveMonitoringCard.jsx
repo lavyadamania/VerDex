@@ -43,7 +43,7 @@ function LiveMonitoringCard() {
     }
 
     loadInitialEvents()
-  }, [])
+  }, [setEvents])
 
   useEffect(() => {
     const token = localStorage.getItem('ct_token')

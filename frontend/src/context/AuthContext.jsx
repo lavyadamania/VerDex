@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import authService from '../services/authService'
 import AuthContext from './auth-context'
 
@@ -45,7 +45,7 @@ export function AuthProvider({ children }) {
         }
     }, [])
 
-    async function login(credentials) {
+    const login = useCallback(async (credentials) => {
         const data = await authService.login(credentials)
         const sessionUser = data?.user
         localStorage.setItem('ct_token', data?.token || '')
@@ -53,26 +53,28 @@ export function AuthProvider({ children }) {
         localStorage.setItem('ct_user', JSON.stringify(sessionUser || null))
         setUser(sessionUser || null)
         return sessionUser
-    }
+    }, [])
 
-    async function register(payload) {
+    const register = useCallback(async (payload) => {
         return authService.register(payload)
-    }
+    }, [])
 
-    async function verifyOtp(otp) {
+    const verifyOtp = useCallback(async (otp) => {
         const data = await authService.verifyOtp(otp)
-        const current = user || {}
-        const updated = { ...current, verification_status: data?.verification_status || 'otp_verified' }
-        localStorage.setItem('ct_user', JSON.stringify(updated))
-        setUser(updated)
+        setUser((currentUser) => {
+            const current = currentUser || {}
+            const updated = { ...current, verification_status: data?.verification_status || 'otp_verified' }
+            localStorage.setItem('ct_user', JSON.stringify(updated))
+            return updated
+        })
         return data
-    }
+    }, [])
 
-    async function resendOtp() {
+    const resendOtp = useCallback(async () => {
         return authService.resendOtp()
-    }
+    }, [])
 
-    async function logout() {
+    const logout = useCallback(async () => {
         try {
             await authService.logout()
         } catch {
@@ -82,7 +84,7 @@ export function AuthProvider({ children }) {
         localStorage.removeItem('ct_refresh_token')
         localStorage.removeItem('ct_user')
         setUser(null)
-    }
+    }, [])
 
     const value = useMemo(
         () => ({
@@ -95,7 +97,7 @@ export function AuthProvider({ children }) {
             resendOtp,
             logout,
         }),
-        [user, loading, isAuthenticated],
+        [user, loading, isAuthenticated, login, register, verifyOtp, resendOtp, logout],
     )
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

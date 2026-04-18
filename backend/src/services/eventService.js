@@ -4,6 +4,7 @@
 const Event = require('../models/Event');
 const { publishRealtimeEvent } = require('./eventPublisher');
 const logger = require('../utils/logger');
+const { expandRoleAliases } = require('../utils/roles');
 
 /**
  * Emit a case event to MongoDB and Redis.
@@ -31,6 +32,10 @@ async function emitCaseEvent(data) {
       usersVisibleTo = [],
     } = data;
 
+    const expandedRolesVisibleTo = Array.from(new Set(
+      rolesVisibleTo.flatMap((role) => expandRoleAliases(role))
+    ));
+
     if (!caseId || !type || !message) {
       throw new Error('caseId, type, and message are required');
     }
@@ -42,7 +47,7 @@ async function emitCaseEvent(data) {
       message,
       createdBy,
       metadata,
-      rolesVisibleTo,
+      rolesVisibleTo: expandedRolesVisibleTo,
       usersVisibleTo,
       eventDate: new Date(),
     });
@@ -55,7 +60,7 @@ async function emitCaseEvent(data) {
       message,
       metadata,
       createdBy: createdBy?.toString() || null,
-      rolesVisibleTo,
+      rolesVisibleTo: expandedRolesVisibleTo,
       usersVisibleTo: usersVisibleTo.map(id => id.toString()),
       eventDate: event.eventDate.toISOString(),
       createdAt: event.createdAt.toISOString(),
@@ -92,11 +97,12 @@ async function getVisibleEvents(user, limit = 20, skip = 0) {
     }
 
     const { _id: userId, role } = user;
+    const visibleRoles = expandRoleAliases(role);
 
     // Build query filter based on visibility rules
     const query = {
       $or: [
-        { rolesVisibleTo: role },
+        { rolesVisibleTo: { $in: visibleRoles } },
         { usersVisibleTo: userId },
       ],
     };
@@ -136,11 +142,12 @@ async function getCaseEvents(caseId, user, limit = 50) {
     }
 
     const { _id: userId, role } = user;
+    const visibleRoles = expandRoleAliases(role);
 
     const query = {
       caseId,
       $or: [
-        { rolesVisibleTo: role },
+        { rolesVisibleTo: { $in: visibleRoles } },
         { usersVisibleTo: userId },
       ],
     };

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import useAuth from '../hooks/useAuth'
+import { normalizeRole } from '../utils/roles'
 
 function LoginPage() {
     const [form, setForm] = useState({ email: '', password: '' })
@@ -17,15 +18,16 @@ function LoginPage() {
 
         try {
             const user = await login(form)
+            const role = normalizeRole(user?.role)
             const from = location.state?.from
             if (from) {
                 navigate(from)
                 return
             }
-            if (['admin', 'court_staff'].includes(user?.role)) navigate('/dashboard/admin')
-            else if (user?.role === 'advocate') navigate('/dashboard/advocate')
-            else if (user?.role === 'visitor') navigate('/dashboard/public')
-            else navigate('/dashboard/victim')
+            if (['admin', 'court_staff'].includes(role)) navigate('/dashboard/admin')
+            else if (role === 'advocate') navigate('/dashboard/advocate')
+            else if (role === 'visitor') navigate('/dashboard/public')
+            else navigate('/dashboard/user')
         } catch (err) {
             setError(err?.response?.data?.error || 'Login failed. Please check your credentials.')
         } finally {

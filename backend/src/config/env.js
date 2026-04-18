@@ -11,7 +11,7 @@ const env = {
   PORT: parseInt(process.env.PORT, 10) || 5000,
 
   // MongoDB
-  MONGO_URI: process.env.MONGO_URI || 'mongodb+srv://verdex_db:verdex123@cluster0.64flr9x.mongodb.net/?appName=Cluster0',
+  MONGO_URI: process.env.MONGO_URI || 'mongodb://localhost:27017/court_transparency',
   REDIS_URL: process.env.REDIS_URL || '',  // Full URL: redis:// or rediss:// (for Upstash)
   REDIS_HOST: process.env.REDIS_HOST || 'localhost',
   REDIS_PORT: parseInt(process.env.REDIS_PORT, 10) || 6379,

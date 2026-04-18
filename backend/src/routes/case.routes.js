@@ -14,6 +14,7 @@ const { authorize, denyVisitor, readOnlyForVisitor, requireVerification, isOwner
 const { auditMiddleware, createAuditEntry } = require('../middleware/audit');
 const { AppError } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
+const { isCaseOwnerRole, normalizeRole } = require('../utils/roles');
 const { syncCaseToRedis, syncCourtStatsToRedis, deleteCaseCache } = require('../utils/caseCache');
 const { emitCaseEvent } = require('../services/eventService');
 
@@ -76,14 +77,14 @@ const addEventSchema = z.object({
 // ============================================================
 router.get('/', optionalAuth, async (req, res, next) => {
   try {
-    const role = req.user ? req.user.role : 'visitor';
+    const role = req.user ? normalizeRole(req.user.role) : 'visitor';
     const { status, case_type, court_id, page = 1, limit = 20, sort = '-last_update' } = req.query;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     let filter = {};
 
     // Role-based filtering
-    if (role === 'victim') {
+    if (isCaseOwnerRole(role)) {
       filter.victim_user = req.user._id;
     }
     // visitor / unauthenticated / admin / court_staff → see all cases
@@ -190,7 +191,7 @@ router.get('/stats', async (req, res, next) => {
 // ============================================================
 router.get('/:id', optionalAuth, async (req, res, next) => {
   try {
-    const role = req.user ? req.user.role : 'visitor';
+    const role = req.user ? normalizeRole(req.user.role) : 'visitor';
     const isPublicView = (role === 'visitor');
 
     const caseDoc = await Case.findById(req.params.id)
@@ -225,7 +226,7 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
     }
 
     // Victims can only see their own cases
-    if (role === 'victim' && caseDoc.victim_user?._id.toString() !== req.user._id.toString()) {
+    if (isCaseOwnerRole(role) && caseDoc.victim_user?._id.toString() !== req.user._id.toString()) {
       throw new AppError('Access denied. You can only view your own cases.', 403);
     }
 
@@ -280,8 +281,8 @@ router.post('/', authenticate, denyVisitor, requireVerification('otp_verified'),
       case_type,
       case_title: case_title || `${case_type.replace(/_/g, ' ')} case`,
       court: court_id,
-      victim_user: req.user.role === 'victim' ? req.user._id : null,
-      victim_id: req.user.role === 'victim' ? req.user._id.toString() : (victim_id || null),
+      victim_user: isCaseOwnerRole(req.user.role) ? req.user._id : null,
+      victim_id: isCaseOwnerRole(req.user.role) ? req.user._id.toString() : (victim_id || null),
       filing_date: new Date(filing_date),
       accused_id,
       judge_id,
@@ -336,21 +337,21 @@ router.put('/:id', authenticate, denyVisitor, validate(updateCaseSchema), async 
     }
 
     // Only owner, admin, or court_staff can update
-    const { role } = req.user;
-    if (role === 'victim' && caseDoc.victim_user?.toString() !== req.user._id.toString()) {
+    const role = normalizeRole(req.user.role);
+    if (isCaseOwnerRole(role) && caseDoc.victim_user?.toString() !== req.user._id.toString()) {
       throw new AppError('Access denied. You can only update your own cases.', 403);
     }
-    if (!['admin', 'court_staff', 'victim', 'advocate'].includes(role)) {
+    if (!['admin', 'court_staff', 'user', 'advocate'].includes(role)) {
       throw new AppError('Access denied.', 403);
     }
 
-    // Victims can only update certain fields
-    const victimAllowedFields = ['case_title', 'advocate_name', 'advocate_contact', 'disclosure_mode', 'disclosed_fields'];
-    if (role === 'victim') {
+    // Case owners can only update certain fields
+    const ownerAllowedFields = ['case_title', 'advocate_name', 'advocate_contact', 'disclosure_mode', 'disclosed_fields'];
+    if (isCaseOwnerRole(role)) {
       const updateKeys = Object.keys(req.body);
-      const disallowed = updateKeys.filter(k => !victimAllowedFields.includes(k));
+      const disallowed = updateKeys.filter(k => !ownerAllowedFields.includes(k));
       if (disallowed.length > 0) {
-        throw new AppError(`Victims cannot update: ${disallowed.join(', ')}`, 403);
+        throw new AppError(`Case owners cannot update: ${disallowed.join(', ')}`, 403);
       }
     }
 
@@ -377,7 +378,7 @@ router.put('/:id', authenticate, denyVisitor, validate(updateCaseSchema), async 
           caseTitle: caseDoc.case_title,
           updatedFields: Object.keys(req.body),
         },
-        rolesVisibleTo: ['admin', 'court_staff', 'advocate', 'victim'],
+        rolesVisibleTo: ['admin', 'court_staff', 'advocate', 'user', 'victim'],
         usersVisibleTo: caseDoc.victim_user ? [caseDoc.victim_user] : [],
       });
     } catch (eventErr) {
@@ -471,7 +472,7 @@ router.patch('/:id/status', authenticate, authorize('admin', 'court_staff'), asy
           oldValue: oldStatus,
           newValue: status,
         },
-        rolesVisibleTo: ['admin', 'court_staff', 'advocate', 'victim'],
+        rolesVisibleTo: ['admin', 'court_staff', 'advocate', 'user', 'victim'],
         usersVisibleTo: caseDoc.victim_user ? [caseDoc.victim_user] : [],
       });
     } catch (eventErr) {
@@ -547,7 +548,7 @@ router.get('/:id/events', optionalAuth, async (req, res, next) => {
     const caseDoc = await Case.findById(req.params.id);
     if (!caseDoc) throw new AppError('Case not found', 404);
 
-    const role = req.user ? req.user.role : 'visitor';
+    const role = req.user ? normalizeRole(req.user.role) : 'visitor';
     const isPublicView = (role === 'visitor');
 
     // Build filter
@@ -599,8 +600,8 @@ router.post('/:id/events', authenticate, denyVisitor, validate(addEventSchema), 
     if (!caseDoc) throw new AppError('Case not found', 404);
 
     // Only owner, admin, court_staff can add events
-    const { role } = req.user;
-    if (role === 'victim' && caseDoc.victim_user?.toString() !== req.user._id.toString()) {
+    const role = normalizeRole(req.user.role);
+    if (isCaseOwnerRole(role) && caseDoc.victim_user?.toString() !== req.user._id.toString()) {
       throw new AppError('Access denied. You can only add events to your own cases.', 403);
     }
 
@@ -712,7 +713,7 @@ router.post('/:id/events', authenticate, denyVisitor, validate(addEventSchema), 
           adjournmentReason: adjournment_reason,
           orderSummary: order_summary,
         },
-        rolesVisibleTo: is_public ? ['admin', 'court_staff', 'advocate', 'victim', 'visitor'] : ['admin', 'court_staff', 'advocate', 'victim'],
+        rolesVisibleTo: is_public ? ['admin', 'court_staff', 'advocate', 'user', 'victim', 'visitor'] : ['admin', 'court_staff', 'advocate', 'user', 'victim'],
         usersVisibleTo: caseDoc.victim_user ? [caseDoc.victim_user] : [],
       });
     } catch (eventErr) {
